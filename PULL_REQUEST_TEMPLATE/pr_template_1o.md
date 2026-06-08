@@ -29,3 +29,4 @@
 - [ ] Há tratamento de exceções (try/catch) onde foi necessário.
 - [ ] Os dados de entrada possuem validação adequada.
 - [ ] Se houver SQL, foi utilizado DEFAULT e CHECKS conforme a demanda.
+- [ ] O código foi devidamente testado e não causa novos bugs.
