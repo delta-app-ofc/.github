@@ -19,6 +19,7 @@
 - [ ] IA Multiagente (FastAPI / Langgraph)
 - [ ] Banco de Dados (Postgres, MongoDB, Redis ou Neo4J)
 - [ ] Infraestrutura / Pipeline de CI/CD 
+- [ ] Gestão de projetos / Documentação / UX
 
 ## 🛠️ Padrões de Projeto e Testes (Se aplicável) 
 > Se utilizou algum Design Pattern ou padrão de teste (TDD), descreva brevemente onde e qual foi a finalidade:
