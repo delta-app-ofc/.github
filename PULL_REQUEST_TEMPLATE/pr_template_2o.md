@@ -32,3 +32,6 @@
 - [ ] As variáveis de ambiente (.env) foram configuradas e **não** foram versionadas.
 - [ ] Foram incluídos tratamentos de exceção centralizados e validações de API.
 - [ ] Se houver novos endpoints na API, a documentação do **Swagger** foi atualizada.
+- [ ] Há tratamento de exceções (try/catch) onde foi necessário.
+- [ ] Os dados de entrada possuem validação adequada.
+- [ ] O código foi devidamente testado e não causa novos bugs.
