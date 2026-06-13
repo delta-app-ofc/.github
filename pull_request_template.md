@@ -2,7 +2,7 @@
 
 ## 📄 Descrição
 > Descreva o que foi implementado. 
-> *Lembre-se de registrar qual Requisito Funcional (RF) do documento de Engenharia de Software está sendo atendido.*
+> *2° ANO: Lembre-se de registrar qual Requisito Funcional (RF) do documento de Engenharia de Software está sendo atendido.*
 > 
 
 ## ✨ Tipo de PR (Seguindo Conventional Commits) 
@@ -10,16 +10,27 @@
 - [ ] fix: Correção de bug 
 - [ ] refactor: Refatoração de código 
 - [ ] docs: Documentação (Swagger, Markdown, etc.) 
-- [ ] test: Implementação de testes (TDD) 
+- [ ] test: Implementação de testes (TDD)
 
-## 💻 Módulos Impactados (Marque com um "x")
+## 💻 Módulos Impactados - 1° ANO (Marque com um "x")
+- [ ] Backend (Java / Servlets / DAO) 
+- [ ] Frontend (HTML / CSS / Landing Page) 
+- [ ] Database (Modelo Lógico / Script SQL) 
+- [ ] Planilha de Controle / SO 
+
+## 💻 Módulos Impactados - 2° ANO (Marque com um "x")
 - [ ] API REST (Spring Boot) 
-- [ ] Aplicação Dinâmica (React / Vite / TypeScript) 
+- [ ] Aplicação Dinâmica (React / TypeScript) 
 - [ ] Mobile (Android / iOS / Firebase)
 - [ ] IA Multiagente (FastAPI / Langgraph)
 - [ ] Banco de Dados (Postgres, MongoDB, Redis ou Neo4J)
 - [ ] Infraestrutura / Pipeline de CI/CD 
 - [ ] Gestão de projetos / Documentação / UX
+
+## 🤖 Uso de Inteligência Artificial
+- [ ] Este código teve auxílio de IA.
+- [ ] Este código foi feito 100% pelos integrantes.
+> *1° ANO: Caso tenha usado IA, lembre-se de registrar o prompt e a validação crítica no Memorial Descritivo!* 
 
 ## 🛠️ Padrões de Projeto e Testes (Se aplicável) 
 > Se utilizou algum Design Pattern ou padrão de teste (TDD), descreva brevemente onde e qual foi a finalidade:
@@ -34,4 +45,5 @@
 - [ ] Se houver novos endpoints na API, a documentação do **Swagger** foi atualizada.
 - [ ] Há tratamento de exceções (try/catch) onde foi necessário.
 - [ ] Os dados de entrada possuem validação adequada.
+- [ ] Se houver SQL, foi utilizado DEFAULT e CHECKS conforme a demanda.
 - [ ] O código foi devidamente testado e não causa novos bugs.
