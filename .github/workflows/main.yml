@@ -1,6 +1,8 @@
 name: "Delta Checks Routing"
 on:
     workflow_call: # serve de template para outros repos da org
+        secrets:
+            inherit: true
 
 jobs:
     route-checks:
