@@ -117,5 +117,4 @@ def main():
         sys.exit(0)  # Libera o pipeline
 
 if __name__ == "__main__":
-    print('teste de pr -> n considere')
     main()
