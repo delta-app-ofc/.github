@@ -1,8 +1,6 @@
 name: "Delta Checks Routing"
 on:
     workflow_call: # serve de template para outros repos da org
-        secrets:
-            inherit: true
 
 jobs:
     route-checks:
@@ -24,7 +22,7 @@ jobs:
 
             - name: Executar script de validação de checks
               env:
-                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                GH_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
                 PR_BODY: ${{ github.event.pull_request.body }}
                 PR_URL: ${{ github.event.pull_request.html_url }}
                 ORG_NAME: ${{ github.repository_owner }}
