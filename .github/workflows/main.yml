@@ -1,7 +1,6 @@
 name: "Delta Checks Routing"
 on:
-    pull_request:
-        types: [opened, edited]
+    workflow_call: # serve de template para outros repos da org
 
 jobs:
     route-checks:
