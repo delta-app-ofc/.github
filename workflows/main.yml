@@ -1,0 +1,38 @@
+name: "Delta Checks Routing"
+on:
+    pull_request:
+        types: [opened, edited]
+
+jobs:
+    route-checks:
+        runs-on: ubuntu-latest
+        permissions:
+            pull-requests: write
+            repository-projects: read
+            contents: read
+
+        steps:
+            - name: Checkout do código do projeto
+              uses: actions/checkout@v4
+
+            - name: Checkout dos scripts globais (.github)
+              uses: actions/checkout@v4
+              with:
+                repository: '${{ github.repository_owner }}/.github'
+                path: 'actions-scripts'
+
+            - name: Executar script de validação de checks
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                PR_BODY: ${{ github.event.pull_request.body }}
+                PR_URL: ${{ github.event.pull_request.html_url }}
+                ORG_NAME: ${{ github.repository_owner }}
+              run: python ./actions-scripts/scripts/route_checks.py
+
+            - name: Executar script de adição de revisores
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                PR_BODY: ${{ github.event.pull_request.body }}
+                PR_URL: ${{ github.event.pull_request.html_url }}
+                ORG_NAME: ${{ github.repository_owner }}
+              run: python ./actions-scripts/scripts/route_reviewers.py
