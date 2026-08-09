@@ -16,7 +16,7 @@ mapping = {
     "- [x] Mobile (Android / iOS / Firebase)": "backend-2ano",
     "- [x] IA Multiagente (FastAPI / Langgraph)": "dados-2ano",
     "- [x] Banco de Dados (Postgres, MongoDB, Redis ou Neo4J)": "dados-2ano",
-    "- [x] Infraestrutura / Pipeline de CI/CD ": "gestao-2ano",
+    "- [x] Infraestrutura / Pipeline de CI/CD": "gestao-2ano",
     "- [x] Gestão de projetos / Documentação / UX": "gestao-2ano",
 }
 
