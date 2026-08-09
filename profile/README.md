@@ -53,7 +53,12 @@ Sensor Hall → ESP32 → API REST → MongoDB → Processamento → PostgreSQL 
 ## 👥 Integrantes
 
 ### 1º Ano
-
+- Bruno Carlos Luz
+- Gabriel Ribeiro da Silva
+- Lucas Gouveia Paraguassu
+- Manuela Dias Velozo
+- Pedro Pizzi Conceição
+- Pietra Rodrigues Guimarães
 
 ### 2º Ano
 - Ana Clara Blefari Soares de Souza
