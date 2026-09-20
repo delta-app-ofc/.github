@@ -1,31 +1,54 @@
 name: "Local Delta Checks"
 on:
-    pull_request:
-        types: [opened, edited]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
-    route-checks:
-        runs-on: ubuntu-latest
-        permissions:
-            pull-requests: write
-            repository-projects: read
-            contents: read
-        steps:
-            - name: Checkout do código
-              uses: actions/checkout@v4
+  code-quality:
+    name: Qualidade e sintaxe do código
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-            - name: Executar script de validação de checks
-              env:
-                GH_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
-                PR_BODY: ${{ github.event.pull_request.body }}
-                PR_URL: ${{ github.event.pull_request.html_url }}
-                ORG_NAME: ${{ github.repository_owner }}
-              run: python ./scripts/route_checks.py
+      - name: Verificar código e sintaxe dos arquivos alterados
+        uses: super-linter/super-linter/slim@v8.7.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: false
+          FAIL_ON_INVALID_GITHUB_ACTIONS_EVENT_CONFIGURATION: true
+          SUPPRESS_OUTPUT_ON_SUCCESS: true
 
-            - name: Executar script de adição de revisores
-              env:
-                GH_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
-                PR_BODY: ${{ github.event.pull_request.body }}
-                PR_URL: ${{ github.event.pull_request.html_url }}
-                ORG_NAME: ${{ github.repository_owner }}
-              run: python ./scripts/route_reviewers.py
+  route-checks:
+    name: 
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      repository-projects: read
+      contents: read
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v6
+
+      - name: Executar script de validação de checks
+        env:
+          GH_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ORG_NAME: ${{ github.repository_owner }}
+        run: python ./scripts/route_checks.py
+
+      - name: Executar script de adição de revisores
+        env:
+          GH_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ORG_NAME: ${{ github.repository_owner }}
+        run: python ./scripts/route_reviewers.py

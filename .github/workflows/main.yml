@@ -7,6 +7,30 @@ on:
         required: true
 
 jobs:
+  code-quality:
+    name: Qualidade e sintaxe do código
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
+    steps:
+      - name: Checkout do código do projeto
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verificar código e sintaxe dos arquivos alterados
+        uses: super-linter/super-linter/slim@v8.7.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: false
+          FAIL_ON_INVALID_GITHUB_ACTIONS_EVENT_CONFIGURATION: true
+          SUPPRESS_OUTPUT_ON_SUCCESS: true
+
   route-checks:
     runs-on: ubuntu-latest
 
@@ -17,10 +41,10 @@ jobs:
 
     steps:
       - name: Checkout do código do projeto
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout dos scripts globais (.github)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.repository_owner }}/.github
           path: actions-scripts
