@@ -13,17 +13,19 @@ jobs:
 
     permissions:
       contents: read
+      issues: write
       packages: read
+      pull-requests: write
       statuses: write
 
     steps:
-      - name: Checkout do código do projeto
+      - name: Checkout do código
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verificar código e sintaxe dos arquivos alterados
+      - name: Verificar código e sintaxe
         uses: super-linter/super-linter/slim@v8.7.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -31,7 +33,8 @@ jobs:
           FAIL_ON_INVALID_GITHUB_ACTIONS_EVENT_CONFIGURATION: true
           SUPPRESS_OUTPUT_ON_SUCCESS: true
 
-  route-checks:
+  pr-checks:
+    name: Governança da Pull Request
     runs-on: ubuntu-latest
 
     permissions:
@@ -40,24 +43,46 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout do código do projeto
+      - name: Checkout do código
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Checkout dos scripts globais (.github)
         uses: actions/checkout@v6
         with:
           repository: ${{ github.repository_owner }}/.github
           path: actions-scripts
+          persist-credentials: false
 
-      - name: Executar script de validação de checks
+      - name: Validar commits
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: >-
+          python ./actions-scripts/scripts/validate_commits.py
+          --base "${{ github.event.pull_request.base.sha }}"
+          --head "${{ github.event.pull_request.head.sha }}"
+
+      - name: Validar .gitignore
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: >-
+          python ./actions-scripts/scripts/validate_gitignore.py
+          --project ./.gitignore
+          --reference ./actions-scripts/.gitignore
+          --repository .
+
+      - name: Validar checks da PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           ORG_NAME: ${{ github.repository_owner }}
         run: python ./actions-scripts/scripts/route_checks.py
 
-      - name: Executar script de adição de revisores
+      - name: Adicionar revisores
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           PR_BODY: ${{ github.event.pull_request.body }}
