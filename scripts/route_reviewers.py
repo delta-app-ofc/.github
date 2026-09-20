@@ -20,7 +20,9 @@ mapping = {
     "- [x] Gestão de projetos / Documentação / UX": "gestao-2ano",
 }
 
-teams_to_add = set() # set para não haver repetição de times caso haja mais de um checkbox marcado para o mesmo time
+teams_to_add = (
+    set()
+)  # set para não haver repetição de times caso haja mais de um checkbox marcado para o mesmo time
 
 # Varre o corpo do PR procurando os termos (ignorando maiúsculas/minúsculas)
 for key, team in mapping.items():

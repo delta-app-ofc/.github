@@ -6,7 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -97,7 +96,9 @@ def mark_checkbox(pr_url: str) -> None:
         return
 
     if unchecked not in body:
-        print("❌ O checkbox de proteção do .env não foi encontrado na descrição da PR.")
+        print(
+            "❌ O checkbox de proteção do .env não foi encontrado na descrição da PR."
+        )
         print(f"Item esperado: {unchecked}")
         sys.exit(1)
 
