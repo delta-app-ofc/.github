@@ -25,6 +25,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: false
+          MULTI_STATUS: false
 
           # Segurança e integridade
           VALIDATE_GITLEAKS: true
