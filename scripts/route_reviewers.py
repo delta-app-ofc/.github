@@ -35,4 +35,7 @@ for team in teams_to_add:
     print(f"Solicitando revisão do time: {full_team_name}")
 
     # Chama a ferramenta 'gh' do sistema
-    subprocess.run(["gh", "pr", "edit", pr_url, "--add-reviewer", full_team_name])
+    subprocess.run(
+        ["gh", "pr", "edit", pr_url, "--add-reviewer", full_team_name],
+        check=False,
+    )

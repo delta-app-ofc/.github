@@ -76,8 +76,6 @@ def check_description(str_pr_body: str) -> list[str]:
 
 def main():
     pr_body = os.getenv("PR_BODY", "")
-    pr_url = os.getenv("PR_URL", "")
-    org_name = os.getenv("ORG_NAME", "")
 
     scope = [
         # primeiro ano

@@ -25,14 +25,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: false
-        
+
+          # Segurança e integridade
           VALIDATE_GITLEAKS: true
           VALIDATE_GIT_MERGE_CONFLICT_MARKERS: true
+
+          # GitHub e arquivos de configuração
           VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_JSON: true
           VALIDATE_YAML: true
+          VALIDATE_XML: true
+
+          # Python
           VALIDATE_PYTHON_RUFF: true
-        
+
+          # Java
+          VALIDATE_JAVA: true
+
+          # JavaScript e TypeScript
+          VALIDATE_JAVASCRIPT_ES: true
+          VALIDATE_TYPESCRIPT_ES: true
+
+          # Web
+          VALIDATE_HTML: true
+          VALIDATE_CSS: true
+
+          # Banco de dados
+          VALIDATE_SQL: true
+
           FAIL_ON_INVALID_GITHUB_ACTIONS_EVENT_CONFIGURATION: true
           SUPPRESS_OUTPUT_ON_SUCCESS: true
 

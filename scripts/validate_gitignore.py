@@ -57,9 +57,9 @@ def tracked_env_files(repository: Path) -> list[str]:
     tracked = []
     for relative_path in result.stdout.splitlines():
         filename = Path(relative_path).name
-        if filename == ".env" or filename.startswith(".env."):
-            if filename not in ALLOWED_ENV_FILES:
-                tracked.append(relative_path)
+        is_environment_file = filename == ".env" or filename.startswith(".env.")
+        if is_environment_file and filename not in ALLOWED_ENV_FILES:
+            tracked.append(relative_path)
 
     return tracked
 
