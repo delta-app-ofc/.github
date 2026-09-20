@@ -21,14 +21,13 @@ COMMIT_PATTERN = re.compile(
 
 
 def get_commits(repository: Path, base: str, head: str) -> list[tuple[str, str]]:
-    """Retorna hash e título dos commits não merge presentes no intervalo."""
+    """Retorna hash e título dos commits presentes no intervalo."""
     result = subprocess.run(
         [
             "git",
             "-C",
             str(repository),
             "log",
-            "--no-merges",
             "--format=%H%x09%s",
             f"{base}..{head}",
         ],
@@ -49,6 +48,13 @@ def get_commits(repository: Path, base: str, head: str) -> list[tuple[str, str]]
         commits.append((commit_hash, subject))
 
     return commits
+
+
+def is_valid_subject(subject: str) -> bool:
+    """Valida Conventional Commits e títulos especiais gerados pelo Git."""
+    is_initial_commit = subject.casefold() == "initial commit"
+    is_merge_commit = subject.startswith("Merge ")
+    return bool(COMMIT_PATTERN.fullmatch(subject)) or is_initial_commit or is_merge_commit
 
 
 def publish_pr_body(body: str) -> None:
@@ -135,7 +141,7 @@ def main() -> None:
     invalid_commits = [
         (commit_hash, subject)
         for commit_hash, subject in commits
-        if not COMMIT_PATTERN.fullmatch(subject)
+        if not is_valid_subject(subject)
     ]
 
     if invalid_commits:
@@ -150,6 +156,8 @@ def main() -> None:
         print("  feat: adiciona consulta de consumo")
         print("  fix(api): corrige validação do usuário")
         print("  docs: atualiza instruções do projeto")
+        print("  Merge branch 'main' into feat/minha-alteracao")
+        print("  Initial Commit")
         sys.exit(1)
 
     print(f"✅ {len(commits)} commit(s) seguem o padrão do Projeto Delta.")
