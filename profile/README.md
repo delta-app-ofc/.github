@@ -65,7 +65,6 @@ Sensor Hall → ESP32 → API REST → MongoDB → Processamento → PostgreSQL 
 - Davi do Nascimento Costa
 - João Pedro Araujo de Souza
 - Mariana Marrão Ferreira Felis
-- Rahquel Korzh Emidio
 - Samuel Pimenta Hironimus
 
 ---

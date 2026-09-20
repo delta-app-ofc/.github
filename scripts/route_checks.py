@@ -2,7 +2,14 @@ import os
 import re
 import sys
 
-def check_options(scope_list: list, pr_type_list: list, mandatory_checks_list: list, use_of_ai_list: list, str_pr_body: str) -> list[str]:
+
+def check_options(
+    scope_list: list,
+    pr_type_list: list,
+    mandatory_checks_list: list,
+    use_of_ai_list: list,
+    str_pr_body: str,
+) -> list[str]:
     body_lower = str_pr_body.lower()
 
     scope_ok = any(item.lower() in body_lower for item in scope_list)
@@ -21,7 +28,9 @@ def check_options(scope_list: list, pr_type_list: list, mandatory_checks_list: l
     if not mandatories_ok:
         for check in mandatory_checks_list:
             if check.lower() not in body_lower:
-                errors.append(f"❌ Item obrigatório não marcado: '{check.replace('- [x] ', '')}'.")
+                errors.append(
+                    f"❌ Item obrigatório não marcado: '{check.replace('- [x] ', '')}'."
+                )
 
     if not use_of_ai_ok:
         errors.append("❌ Nenhum item de uso de IA foi selecionado.")
@@ -35,7 +44,9 @@ def check_description(str_pr_body: str) -> list[str]:
     errors = []
 
     if not match:
-        errors.append("❌ Erro: Não foi possível localizar a seção '## 📄 Descrição' ou '## ✨ Tipo de PR'.")
+        errors.append(
+            "❌ Erro: Não foi possível localizar a seção '## 📄 Descrição' ou '## ✨ Tipo de PR'."
+        )
         return errors
 
     raw_description = match.group(1)
@@ -43,7 +54,7 @@ def check_description(str_pr_body: str) -> list[str]:
 
     template_phrases = [
         r"Descreva o que foi implementado\.",
-        r"2° ANO: Lembre-se de registrar qual Requisito Funcional \(RF\) do documento de Engenharia de Software está sendo atendido\."
+        r"2° ANO: Lembre-se de registrar qual Requisito Funcional \(RF\) do documento de Engenharia de Software está sendo atendido\.",
     ]
 
     for phrase in template_phrases:
@@ -57,14 +68,14 @@ def check_description(str_pr_body: str) -> list[str]:
 
     if character_count < 30:
         errors.append(
-            f"❌ Erro: Descrição muito curta ou não preenchida (Apenas {character_count} caracteres úteis encontrados).")
+            f"❌ Erro: Descrição muito curta ou não preenchida (Apenas {character_count} caracteres úteis encontrados)."
+        )
 
     return errors
 
+
 def main():
     pr_body = os.getenv("PR_BODY", "")
-    pr_url = os.getenv("PR_URL", "")
-    org_name = os.getenv("ORG_NAME", "")
 
     scope = [
         # primeiro ano
@@ -72,7 +83,6 @@ def main():
         "- [x] Frontend (HTML / CSS / Landing Page)",
         "- [x] Database (Modelo Lógico / Script SQL)",
         "- [x] Planilha de Controle / SO",
-
         # segundo ano
         "- [x] API REST (Spring Boot)",
         "- [x] Aplicação Dinâmica (React / TypeScript)",
@@ -80,7 +90,7 @@ def main():
         "- [x] IA Multiagente (FastAPI / Langgraph)",
         "- [x] Banco de Dados (Postgres, MongoDB, Redis ou Neo4J)",
         "- [x] Infraestrutura / Pipeline de CI/CD ",
-        "- [x] Gestão de projetos / Documentação / UX"
+        "- [x] Gestão de projetos / Documentação / UX",
     ]
 
     pr_type = [
@@ -88,17 +98,17 @@ def main():
         "- [x] fix: Correção de bug",
         "- [x] refactor: Refatoração de código",
         "- [x] docs: Documentação (Swagger, Markdown, etc.)",
-        "- [x] test: Implementação de testes (TDD)"
+        "- [x] test: Implementação de testes (TDD)",
     ]
 
     mandatory_checks = [
         "- [x] Os commits deste branch seguem estritamente o padrão **Conventional Commits**.",
-        "- [x] O código foi devidamente testado e não causa novos bugs."
+        "- [x] O código foi devidamente testado e não causa novos bugs.",
     ]
 
     use_of_ai = [
         "- [x] Este código teve auxílio de IA.",
-        "- [x] Este código foi feito 100% pelos integrantes."
+        "- [x] Este código foi feito 100% pelos integrantes.",
     ]
 
     errors = check_options(scope, pr_type, mandatory_checks, use_of_ai, pr_body)
@@ -115,6 +125,7 @@ def main():
     else:
         print("✅ Sucesso! O checklist do Pull Request foi preenchido corretamente.")
         sys.exit(0)  # Libera o pipeline
+
 
 if __name__ == "__main__":
     main()
