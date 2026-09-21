@@ -13,7 +13,7 @@ if hasattr(sys.stdout, "reconfigure"):
 CHECKBOX_TEXT = (
     "As variáveis de ambiente (.env) foram configuradas e **não** foram versionadas."
 )
-ALLOWED_ENV_FILES = {".env.example", ".env.sample", ".env.template"}
+ALLOWED_ENV_FILES = {".env.example", ".env.sample", ".env.template", ".env.test"}
 
 
 def active_rules(content: str) -> list[str]:
@@ -138,12 +138,12 @@ def main() -> None:
         print(f"❌ Arquivo-base não encontrado: {reference_path}")
         sys.exit(1)
 
-    reference_content = reference_path.read_text(encoding="utf-8")
+    reference_content = reference_path.read_text(encoding="utf-8-sig")
 
     if not project_path.is_file():
         project_rules = []
     else:
-        project_rules = active_rules(project_path.read_text(encoding="utf-8"))
+        project_rules = active_rules(project_path.read_text(encoding="utf-8-sig"))
 
     required_rules = active_rules(reference_content)
     rules_are_valid = contains_rules_in_order(project_rules, required_rules)
