@@ -27,10 +27,18 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ${{ github.repository_owner }}/.github
+          ref: main
           path: actions-scripts
           persist-credentials: false
 
+      - name: Verificar bypass emergencial
+        id: ci-bypass
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python ./actions-scripts/scripts/check_ci_bypass.py
+
       - name: Validar commits
+        if: steps.ci-bypass.outputs.enabled != 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -40,6 +48,7 @@ jobs:
           --head "${{ github.event.pull_request.head.sha }}"
 
       - name: Validar .gitignore
+        if: steps.ci-bypass.outputs.enabled != 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -50,6 +59,7 @@ jobs:
           --repository .
 
       - name: Validar checks da PR
+        if: steps.ci-bypass.outputs.enabled != 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -57,6 +67,7 @@ jobs:
         run: python ./actions-scripts/scripts/route_checks.py
 
       - name: Adicionar revisores
+        if: steps.ci-bypass.outputs.enabled != 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           PR_BODY: ${{ github.event.pull_request.body }}
