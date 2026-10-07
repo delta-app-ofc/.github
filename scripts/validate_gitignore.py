@@ -134,11 +134,14 @@ def main() -> None:
     reference_content = reference_path.read_text(encoding="utf-8-sig")
 
     if not project_path.is_file():
+        print(f"❌ .gitignore do projeto não encontrado: {project_path.resolve()}")
         project_rules = []
     else:
         project_rules = active_rules(project_path.read_text(encoding="utf-8-sig"))
 
     required_rules = active_rules(reference_content)
+    print(f".gitignore avaliado: {project_path.resolve()}")
+    print(f"Regras ativas encontradas: {len(set(project_rules))}")
     rules_are_valid = contains_required_rules(project_rules, required_rules)
     tracked_env = tracked_env_files(Path(args.repository))
 
@@ -160,7 +163,7 @@ def main() -> None:
             "A ordem, os comentários e as linhas em branco podem ser diferentes:"
         )
         print("\n--- INÍCIO DO .gitignore OBRIGATÓRIO ---")
-        print(reference_content.rstrip())
+        print("\n".join(required_rules))
         print("--- FIM DO .gitignore OBRIGATÓRIO ---")
         print(
             "\nRegras adicionais também podem ser incluídas."
