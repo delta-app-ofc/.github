@@ -11,7 +11,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 
-ALLOWED_TYPES = ("feat", "fix", "refactor", "docs", "test", "style", "chore", "merge")
+ALLOWED_TYPES = ("feat", "fix", "refactor", "docs", "test", "style", "chore", "merge", "wip")
 CHECKBOX_TEXT = (
     "Os commits deste branch seguem estritamente o padrão **Conventional Commits**."
 )
