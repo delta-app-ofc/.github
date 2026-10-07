@@ -25,18 +25,11 @@ def active_rules(content: str) -> list[str]:
     ]
 
 
-def contains_rules_in_order(
+def contains_required_rules(
     project_rules: list[str], required_rules: list[str]
 ) -> bool:
-    """Confirma que todas as regras obrigatórias existem na ordem definida."""
-    required_index = 0
-
-    for rule in project_rules:
-        has_next_rule = required_index < len(required_rules)
-        if has_next_rule and rule == required_rules[required_index]:
-            required_index += 1
-
-    return required_index == len(required_rules)
+    """Confirma a presença das regras obrigatórias, independentemente da ordem."""
+    return set(required_rules).issubset(set(project_rules))
 
 
 def tracked_env_files(repository: Path) -> list[str]:
@@ -146,11 +139,16 @@ def main() -> None:
         project_rules = active_rules(project_path.read_text(encoding="utf-8-sig"))
 
     required_rules = active_rules(reference_content)
-    rules_are_valid = contains_rules_in_order(project_rules, required_rules)
+    rules_are_valid = contains_required_rules(project_rules, required_rules)
     tracked_env = tracked_env_files(Path(args.repository))
 
     if not rules_are_valid or tracked_env:
         print("❌ O projeto não atende ao padrão mínimo de proteção do .gitignore.")
+
+        if not rules_are_valid:
+            print("\nRegras obrigatórias ausentes:")
+            for rule in sorted(set(required_rules) - set(project_rules)):
+                print(f"  - {rule}")
 
         if tracked_env:
             print("\nArquivos de ambiente rastreados indevidamente:")
@@ -158,15 +156,14 @@ def main() -> None:
                 print(f"  - {relative_path}")
 
         print(
-            "\nO .gitignore deve conter, no mínimo, exatamente estas regras "
-            "e nesta ordem:"
+            "\nO .gitignore deve conter, no mínimo, as regras abaixo. "
+            "A ordem, os comentários e as linhas em branco podem ser diferentes:"
         )
         print("\n--- INÍCIO DO .gitignore OBRIGATÓRIO ---")
         print(reference_content.rstrip())
         print("--- FIM DO .gitignore OBRIGATÓRIO ---")
         print(
-            "\nRegras adicionais podem ser incluídas, sem alterar a ordem "
-            "das obrigatórias."
+            "\nRegras adicionais também podem ser incluídas."
         )
         sys.exit(1)
 
