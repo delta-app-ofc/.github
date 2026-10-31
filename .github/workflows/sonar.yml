@@ -1,4 +1,4 @@
-name: ValidaÃ§Ã£o Sonar
+name: Validação Sonar
 
 on:
   pull_request:
@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   tests:
-    name: Testes e relatÃ³rios
+    name: Testes e relatórios
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -r requirements-dev.txt
-      - name: Executar toda a suÃ­te obrigatÃ³ria
+      - name: Executar toda a suíte obrigatória
         run: |
           python -m coverage run --branch --source=scripts tests/run_ci.py
           python -m coverage xml -o reports/coverage.xml
@@ -40,7 +40,7 @@ jobs:
   scan:
     if: github.event_name == 'pull_request'
     needs: tests
-    uses: delta-app-ofc/.github/.github/workflows/sonar_scan.yml@cb23646ff67b82ee47a73f4c94babef59c1dd20d
+    uses: delta-app-ofc/.github/.github/workflows/sonar_scan.yml@d16a26074a524d0d414fa03b97931fb8d7713d90
     with:
       project_key: ${{ vars.SONAR_PROJECT_KEY || 'delta-app-ofc_.github' }}
       organization: ${{ vars.SONAR_ORGANIZATION || 'delta-app-ofc' }}
