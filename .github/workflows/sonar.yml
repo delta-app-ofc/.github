@@ -1,0 +1,60 @@
+name: ValidaÃ§Ã£o Sonar
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonar-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Testes e relatÃ³rios
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Executar toda a suÃ­te obrigatÃ³ria
+        run: |
+          python -m coverage run --branch --source=scripts tests/run_ci.py
+          python -m coverage xml -o reports/coverage.xml
+          python -m coverage html -d reports/htmlcov
+          python -m coverage report -m
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sonar-reports
+          path: reports/
+          if-no-files-found: error
+  scan:
+    if: github.event_name == 'pull_request'
+    needs: tests
+    uses: delta-app-ofc/.github/.github/workflows/sonar_scan.yml@cb23646ff67b82ee47a73f4c94babef59c1dd20d
+    with:
+      project_key: ${{ vars.SONAR_PROJECT_KEY || 'delta-app-ofc_.github' }}
+      organization: ${{ vars.SONAR_ORGANIZATION || 'delta-app-ofc' }}
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  report-ci:
+    if: always() && github.event_name == 'pull_request'
+    needs: tests
+    permissions:
+      actions: read
+      issues: write
+      pull-requests: write
+    uses: delta-app-ofc/.github/.github/workflows/report_ci.yml@7151f689c89bb564d50d1e15ceaf486ad89ff73b
+    with:
+      needs_results: ${{ toJSON(needs) }}
+    secrets:
+      DELTA_ORG_AUTOMATION_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
