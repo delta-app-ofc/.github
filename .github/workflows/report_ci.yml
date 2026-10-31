@@ -108,10 +108,10 @@ jobs:
             let updatedBody = pr.body
               .replace(/<!-- delta-ci-result:[^>]*-->/g, '')
               .replace(/\s+$/, '') + '\n\n' + resultMarker;
-            const checkbox = /^- \[[ xX]\] O código foi devidamente testado e não causa novos bugs\.$/m;
+            const checkbox = /^- \[[ xX]\] (O código foi devidamente testado e não causa novos bugs\.)([^\r\n]*)$/m;
             if (checkbox.test(updatedBody)) {
               const replacement = '- [' + (passed ? 'x' : ' ') +
-                '] O código foi devidamente testado e não causa novos bugs.';
+                '] $1$2';
               updatedBody = updatedBody.replace(checkbox, replacement);
             } else {
               core.warning('O checkbox de testes esperado não foi encontrado na descrição da PR.');
