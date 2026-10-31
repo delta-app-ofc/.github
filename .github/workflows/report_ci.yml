@@ -44,10 +44,11 @@ jobs:
               owner, repo, pull_number: number
             });
 
-            if (run.head_sha !== prEvent.head.sha || pr.head.sha !== prEvent.head.sha) {
+            if (pr.head.sha !== prEvent.head.sha) {
               core.info('Execução antiga; comentário e checklist não foram alterados.');
               return;
             }
+            const testedSha = prEvent.head.sha;
 
             const results = JSON.parse(process.env.NEEDS_RESULTS);
             const passed = Object.keys(results).length > 0 &&
@@ -55,11 +56,14 @@ jobs:
             const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
               owner, repo, run_id: context.runId, per_page: 100
             });
-            const jobLines = jobs.jobs
+            const isReporterJob = job =>
+              /report-ci|reportar resultado do ci/i.test(job.name);
+            const technicalJobs = jobs.jobs.filter(job => !isReporterJob(job));
+            const jobLines = technicalJobs
               .filter(job => job.conclusion !== 'skipped')
               .map(job => '- ' + (job.conclusion === 'success' ? '✅' : '❌') +
                 ' ' + job.name + ': ' + (job.conclusion || job.status));
-            const failedJobs = jobs.jobs.filter(job =>
+            const failedJobs = technicalJobs.filter(job =>
               job.conclusion && !['success', 'skipped'].includes(job.conclusion)
             );
             const failureLines = failedJobs.flatMap(job => {
@@ -74,7 +78,7 @@ jobs:
             const marker = '<!-- delta-ci-report -->';
             const body = marker + '\n## CI ' + (passed ? 'aprovado ✅' : 'reprovado ❌') +
               '\n\nWorkflow: **' + context.workflow + '** · execução #' + run.run_number +
-              '\nCommit testado: `' + run.head_sha.slice(0, 7) + '`' +
+              '\nCommit testado: `' + testedSha.slice(0, 7) + '`' +
               '\n\n' + (jobLines.length ? jobLines.join('\n') : 'Nenhum job de teste foi concluído.') +
               '\n\n' + (passed
                 ? 'Os testes passaram para o commit atual da PR.'
