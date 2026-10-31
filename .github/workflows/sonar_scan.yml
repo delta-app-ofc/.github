@@ -16,10 +16,6 @@ on:
         description: Raiz removida pelo upload-artifact (reports para Python/JS, target para Maven)
         default: reports
         type: string
-      artifact_path:
-        description: Raiz removida pelo upload-artifact (reports para Python/JS, target para Maven)
-        default: reports
-        type: string
       host_url:
         default: https://sonarcloud.io
         type: string
