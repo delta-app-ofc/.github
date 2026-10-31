@@ -34,6 +34,10 @@ A avaliação roda de código confiável da base por `pull_request_target`/`work
 
 Após merge da infraestrutura e teste real da configuração, adicione aos checks obrigatórios da main: o job de testes/cobertura do repo, o job de integração quando aplicável, e `Delta / Política Sonar`. Preserve os checks/regras atuais e a quantidade normal de revisões. Não aumente globalmente essa quantidade quando só uma PR tem achados. Workflows novos de `workflow_run`/agenda precisam existir na branch padrão para operar; esta PR não faz merge automático nem altera CD.
 
+O workflow manual `Ativar checks obrigatórios Sonar` no repo `.github` automatiza esse acréscimo após merge. Informe o repo completo, a branch e um JSON com os nomes exatos dos checks de testes e integração, como `["Testes e relatórios", "Integração"]`. Copie os nomes dos checks reais da PR; não suponha que todos os repos usam os mesmos nomes. O workflow só roda da main, exige proteção já existente e acrescenta checks sem substituir revisões, bypasses, permissões ou outras regras. Se a proteção não puder ser lida, não altera nada.
+
+No Free, PRs precisam ter destino main. A branch do RPA deriva de `test/ci-tecnico`, mas a PR tem destino main por decisão do usuário. Commits herdados dessa base aparecem na PR.
+
 Se a proteção/rulesets não puderem ser lidos ou o token Sonar não puder consultar scannerContext, a avaliação permanece pendente/reprovada, com diagnóstico. A ativação e a análise real dependem da configuração externa; testes locais usam respostas sintéticas e não comprovam integração com uma conta Sonar.
 
 ## Escopo de cobertura
