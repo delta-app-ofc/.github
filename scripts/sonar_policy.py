@@ -101,8 +101,6 @@ def sonar_snapshot(sonar, project, number, sha):
     activity = sonar.call("/api/ce/activity?" + urlencode({"component": project, "ps": 100}))
     matched = None
     for task in activity.get("tasks", []):
-        if task.get("status") != "SUCCESS":
-            continue
         details = sonar.call("/api/ce/task?" + urlencode({"id": task["id"], "additionalFields": "scannerContext"}))["task"]
         context = details.get("scannerContext", "")
         # A primeira análise desta PR é a mais recente. Não procura uma versão
@@ -111,6 +109,8 @@ def sonar_snapshot(sonar, project, number, sha):
                                   for line in context.splitlines() if "=" in line)
         if (context_properties.get("sonar.projectKey") == project
                 and context_properties.get("sonar.pullrequest.key") == str(number)):
+            if task.get("status") != "SUCCESS":
+                raise ValueError("A análise mais recente desta PR não terminou com sucesso")
             if not scanner_context_matches(context, project, number, sha):
                 raise ValueError("A análise mais recente da PR pertence a outro SHA")
             matched = details

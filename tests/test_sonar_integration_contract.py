@@ -70,6 +70,16 @@ class IntegrationContractTests(unittest.TestCase):
             with self.subTest(sonar=sonar), self.assertRaises(ValueError):
                 sonar_snapshot(sonar, "project", 1, "abc")
 
+    def test_latest_failed_task_does_not_fall_back_to_old_success(self):
+        sonar = FakeSonar()
+        original = sonar.call
+        def response(path):
+            if path.startswith("/api/ce/activity?"):
+                return {"tasks": [{"id": "new", "status": "FAILED"}, {"id": "old", "status": "SUCCESS"}]}
+            return original(path)
+        with patch.object(sonar, "call", side_effect=response), self.assertRaises(ValueError):
+            sonar_snapshot(sonar, "project", 1, "abc")
+
     def test_publishes_status_and_separate_comment_using_maximum_baseline(self):
         github = FakeGitHub()
         evaluate_pr(github, FakeSonar(), "owner/repo", 1, "project")
