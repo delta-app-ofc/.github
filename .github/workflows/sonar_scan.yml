@@ -66,3 +66,27 @@ jobs:
           name: sonar-analysis-task
           path: .scannerwork/report-task.txt
           if-no-files-found: warn
+      - name: Aguardar processamento sem aplicar o gate padrão
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ inputs.host_url }}
+        run: |
+          python -I - <<'PY'
+          import json, os, time
+          from pathlib import Path
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+          task = dict(line.split('=', 1) for line in Path('.scannerwork/report-task.txt').read_text().splitlines() if '=' in line)
+          url = os.environ['SONAR_HOST_URL'].rstrip('/') + '/api/ce/task?' + urlencode({'id': task['ceTaskId']})
+          for attempt in range(120):
+              request = Request(url, headers={'Authorization': 'Bearer ' + os.environ['SONAR_TOKEN']})
+              with urlopen(request, timeout=30) as response:
+                  status = json.load(response)['task']['status']
+              if status == 'SUCCESS':
+                  break
+              if status in {'FAILED', 'CANCELED'}:
+                  raise SystemExit('Processamento Sonar falhou: ' + status)
+              time.sleep(5)
+          else:
+              raise SystemExit('Tempo limite aguardando processamento Sonar')
+          PY
