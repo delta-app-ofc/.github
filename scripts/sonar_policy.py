@@ -6,7 +6,7 @@ As APIs são injetáveis para permitir testes sem tokens ou chamadas externas.
 
 import json
 import os
-from urllib.parse import urlencode, urlparse
+from urllib.parse import quote, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 
@@ -145,8 +145,10 @@ def evaluate_pr(github, sonar, repo, number, project):
     sha = pr["head"]["sha"]
     state, description, result = "failure", "Validação Sonar pendente", None
     try:
+        if not project or not sonar.token:
+            raise ValueError("Configure SONAR_PROJECT_KEY e SONAR_POLICY_TOKEN")
         from urllib.error import HTTPError
-        base = pr["base"]["ref"]
+        base = quote(pr["base"]["ref"], safe="")
         try:
             protection = github.call(f"{prefix}/branches/{base}/protection")
         except HTTPError as error:
@@ -195,8 +197,6 @@ def main():
     github = API("https://api.github.com", os.environ["GH_TOKEN"])
     sonar = API(os.environ.get("SONAR_HOST_URL", "https://sonarcloud.io"), os.environ["SONAR_TOKEN"])
     repo, project = os.environ["GITHUB_REPOSITORY"], os.environ["SONAR_PROJECT_KEY"]
-    if not project or not sonar.token:
-        raise ValueError("Configure SONAR_PROJECT_KEY e SONAR_TOKEN")
     number = os.environ.get("PR_NUMBER", "")
     prs = [{"number": int(number)}] if number else github.pages(f"/repos/{repo}/pulls?state=open")
     for pr in prs:
