@@ -1,0 +1,108 @@
+name: Análise Sonar reutilizável
+
+on:
+  workflow_call:
+    inputs:
+      project_key:
+        required: true
+        type: string
+      organization:
+        required: true
+        type: string
+      artifact_name:
+        default: sonar-reports
+        type: string
+      artifact_path:
+        description: Raiz removida pelo upload-artifact (reports para Python/JS, target para Maven)
+        default: reports
+        type: string
+      host_url:
+        default: https://sonarcloud.io
+        type: string
+    secrets:
+      SONAR_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Análise Sonar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validar configuração
+        env:
+          PROJECT_KEY: ${{ inputs.project_key }}
+          ORGANIZATION: ${{ inputs.organization }}
+          TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          test -n "$PROJECT_KEY" || { echo 'Configure SONAR_PROJECT_KEY'; exit 1; }
+          test -n "$ORGANIZATION" || { echo 'Configure SONAR_ORGANIZATION'; exit 1; }
+          test -n "$TOKEN" || { echo 'Configure o secret SONAR_TOKEN'; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ inputs.artifact_path }}
+      - name: Analisar o SHA testado
+        if: github.event_name == 'pull_request'
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ inputs.host_url }}
+        with:
+          args: >-
+            -Dsonar.projectKey=${{ inputs.project_key }}
+            -Dsonar.organization=${{ inputs.organization }}
+            -Dsonar.scm.revision=${{ github.event.pull_request.head.sha || github.sha }}
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
+      - name: Atualizar referencia da main
+        if: github.event_name != 'pull_request'
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ inputs.host_url }}
+        with:
+          args: >-
+            -Dsonar.projectKey=${{ inputs.project_key }}
+            -Dsonar.organization=${{ inputs.organization }}
+            -Dsonar.scm.revision=${{ github.sha }}
+      - name: Preservar referência da análise
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonar-analysis-task
+          path: .scannerwork/report-task.txt
+          if-no-files-found: warn
+      - name: Aguardar processamento sem aplicar o gate padrão
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ inputs.host_url }}
+        run: |
+          python -I - <<'PY'
+          import json, os, time
+          from pathlib import Path
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+          task = dict(line.split('=', 1) for line in Path('.scannerwork/report-task.txt').read_text().splitlines() if '=' in line)
+          url = os.environ['SONAR_HOST_URL'].rstrip('/') + '/api/ce/task?' + urlencode({'id': task['ceTaskId']})
+          for attempt in range(120):
+              request = Request(url, headers={'Authorization': 'Bearer ' + os.environ['SONAR_TOKEN']})
+              with urlopen(request, timeout=30) as response:
+                  status = json.load(response)['task']['status']
+              if status == 'SUCCESS':
+                  break
+              if status in {'FAILED', 'CANCELED'}:
+                  raise SystemExit('Processamento Sonar falhou: ' + status)
+              time.sleep(5)
+          else:
+              raise SystemExit('Tempo limite aguardando processamento Sonar')
+          PY

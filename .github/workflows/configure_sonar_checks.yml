@@ -1,0 +1,40 @@
+name: Ativar checks obrigatórios Sonar
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Repositório completo (delta-app-ofc/nome)'
+        type: string
+        required: true
+      branch:
+        description: Branch já protegida
+        type: string
+        default: main
+      test_checks:
+        description: 'JSON com nomes exatos dos checks de testes/integração (sem o gate padrão Sonar)'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  configure:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Acrescentar checks preservando as regras existentes
+        env:
+          GH_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
+          TARGET_REPOSITORY: ${{ inputs.repository }}
+          TARGET_BRANCH: ${{ inputs.branch }}
+          REQUIRED_TEST_CHECKS: ${{ inputs.test_checks }}
+        run: python -m scripts.configure_sonar_checks
