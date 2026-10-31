@@ -18,12 +18,12 @@ class ConfigureTests(unittest.TestCase):
         api = Mock()
         api.call.side_effect = RuntimeError("permission denied")
         with self.assertRaises(RuntimeError):
-            configure(api, "delta-app-ofc/example", "main", [])
+            configure(api, "delta-app-ofc/example", "main", ["Tests"])
         self.assertEqual(api.call.call_count, 1)
 
     def test_rejects_other_organization_and_empty_check(self):
         api = Mock()
-        for repo, checks in [("other/example", []), ("delta-app-ofc/example", [""])]:
+        for repo, checks in [("other/example", []), ("delta-app-ofc/example", [""]), ("delta-app-ofc/example", [])]:
             with self.assertRaises(ValueError):
                 configure(api, repo, "main", checks)
         api.call.assert_not_called()

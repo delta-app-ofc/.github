@@ -10,9 +10,9 @@ from scripts.sonar_policy import API, CHECK
 
 
 def configure(api, repo, branch, extra_checks):
-    if not repo.startswith("delta-app-ofc/"):
+    if not repo.startswith("delta-app-ofc/") and repo != "deltaappoficial/delta-bi-management-report":
         raise ValueError("Repositório fora da organização Delta")
-    if not all(isinstance(name, str) and name.strip() for name in extra_checks):
+    if not extra_checks or not all(isinstance(name, str) and name.strip() for name in extra_checks):
         raise ValueError("Nomes dos checks devem ser textos não vazios")
     path = f"/repos/{repo}/branches/{quote(branch, safe='')}/protection"
     protection = api.call(path)
