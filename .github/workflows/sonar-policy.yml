@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   policy:
-    uses: delta-app-ofc/.github/.github/workflows/sonar_policy.yml@cb23646ff67b82ee47a73f4c94babef59c1dd20d
+    uses: delta-app-ofc/.github/.github/workflows/sonar_policy.yml@5fbbd27f3bc02065873d05243fd9d58ee3550297
     with:
       project_key: ${{ vars.SONAR_PROJECT_KEY || 'delta-app-ofc_.github' }}
       pr_number: ${{ github.event.pull_request.number && format('{0}', github.event.pull_request.number) || '' }}
