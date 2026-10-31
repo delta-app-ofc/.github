@@ -107,6 +107,13 @@ def scanner_context_matches(context, project, number, sha):
             and properties.get("sonar.scm.revision") == sha)
 
 
+def metric_value(item):
+    """Cloud usa periods[]; Server tambem pode devolver period/value."""
+    period = item.get("period") or next(
+        (entry for entry in item.get("periods", []) if entry.get("index") == 1), {})
+    return period.get("value", item.get("value"))
+
+
 def sonar_snapshot(sonar, project, number, sha):
     """Exige tarefa concluída ligada ao projeto, PR e SHA, não análise antiga."""
     activity = sonar.call("/api/ce/activity?" + urlencode({"component": project, "ps": 100}))
@@ -131,7 +138,7 @@ def sonar_snapshot(sonar, project, number, sha):
     query = {"component": project, "pullRequest": number,
              "metricKeys": "new_coverage,new_lines_to_cover"}
     raw = sonar.call("/api/measures/component?" + urlencode(query))["component"]["measures"]
-    measures = {item["metric"]: item.get("period", {}).get("value", item.get("value")) for item in raw}
+    measures = {item["metric"]: metric_value(item) for item in raw}
     issues = []
     for page in range(1, 101):
         result = sonar.call("/api/issues/search?" + urlencode({"componentKeys": project,

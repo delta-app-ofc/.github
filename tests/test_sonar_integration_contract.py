@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
-from scripts.sonar_policy import API, evaluate_pr, sonar_snapshot
+from scripts.sonar_policy import API, evaluate_pr, sonar_snapshot, metric_value
 
 
 class FakeGitHub:
@@ -52,14 +52,20 @@ class FakeSonar:
             return {"task": {"id": "task1", "analysisId": "analysis1", "scannerContext":
                     f"sonar.projectKey=project\nsonar.pullrequest.key=1\nsonar.scm.revision={self.sha}"}}
         if path.startswith("/api/measures/component?"):
-            return {"component": {"measures": [{"metric": "new_lines_to_cover", "period": {"value": "10"}},
-                                                {"metric": "new_coverage", "period": {"value": self.coverage}}]}}
+            return {"component": {"measures": [{"metric": "new_lines_to_cover", "periods": [{"index": 1, "value": "10"}]},
+                                                {"metric": "new_coverage", "periods": [{"index": 1, "value": self.coverage}]}]}}
         if path.startswith("/api/issues/search?"):
             return {"issues": [{"type": "BUG", "severity": "CRITICAL"}, {"type": "CODE_SMELL", "severity": "CRITICAL"}], "paging": {"total": 2}}
         raise AssertionError(path)
 
 
 class IntegrationContractTests(unittest.TestCase):
+    def test_metric_payloads_match_cloud_and_server_formats(self):
+        self.assertEqual(metric_value({"periods": [{"index": 1, "value": "0"}]}), "0")
+        self.assertEqual(metric_value({"period": {"value": "70"}}), "70")
+        self.assertEqual(metric_value({"value": "80"}), "80")
+        self.assertIsNone(metric_value({}))
+
     def test_snapshot_accepts_current_sha_and_period_values(self):
         issues, measures = sonar_snapshot(FakeSonar(), "project", 1, "abc")
         self.assertEqual(len(issues), 2)
