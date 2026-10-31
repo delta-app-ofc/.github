@@ -1,0 +1,68 @@
+name: Análise Sonar reutilizável
+
+on:
+  workflow_call:
+    inputs:
+      project_key:
+        required: true
+        type: string
+      organization:
+        required: true
+        type: string
+      artifact_name:
+        default: sonar-reports
+        type: string
+      host_url:
+        default: https://sonarcloud.io
+        type: string
+    secrets:
+      SONAR_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Análise Sonar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validar configuração
+        env:
+          PROJECT_KEY: ${{ inputs.project_key }}
+          ORGANIZATION: ${{ inputs.organization }}
+          TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          test -n "$PROJECT_KEY" || { echo 'Configure SONAR_PROJECT_KEY'; exit 1; }
+          test -n "$ORGANIZATION" || { echo 'Configure SONAR_ORGANIZATION'; exit 1; }
+          test -n "$TOKEN" || { echo 'Configure o secret SONAR_TOKEN'; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: .
+      - name: Analisar o SHA testado
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ inputs.host_url }}
+        with:
+          args: >-
+            -Dsonar.projectKey=${{ inputs.project_key }}
+            -Dsonar.organization=${{ inputs.organization }}
+            -Dsonar.scm.revision=${{ github.event.pull_request.head.sha || github.sha }}
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
+      - name: Preservar referência da análise
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonar-analysis-task
+          path: .scannerwork/report-task.txt
+          if-no-files-found: warn

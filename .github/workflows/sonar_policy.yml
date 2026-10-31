@@ -1,0 +1,47 @@
+name: Política Sonar reutilizável
+
+on:
+  workflow_call:
+    inputs:
+      project_key:
+        type: string
+        required: true
+      pr_number:
+        type: string
+        default: ''
+      host_url:
+        type: string
+        default: https://sonarcloud.io
+    secrets:
+      SONAR_POLICY_TOKEN:
+        required: false
+      DELTA_ORG_AUTOMATION_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  policy:
+    name: Avaliar política e aprovações Sonar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Este SHA contém somente a implementação revisada da política.
+      # Nunca faz checkout nem executa arquivos do head da PR com token de escrita.
+      - uses: actions/checkout@v4
+        with:
+          repository: delta-app-ofc/.github
+          ref: d5be2203b3befbb0c8fec575bdaf3d9ca5b7d461
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Avaliar e publicar resultado no SHA atual
+        env:
+          GH_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_POLICY_TOKEN }}
+          SONAR_HOST_URL: ${{ inputs.host_url }}
+          SONAR_PROJECT_KEY: ${{ inputs.project_key }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: python scripts/sonar_policy.py
