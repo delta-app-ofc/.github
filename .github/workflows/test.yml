@@ -1,0 +1,43 @@
+name: Testes técnicos
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: technical-tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verificar sintaxe Python
+        run: python -m compileall -q scripts tests
+      - name: Executar testes unitários
+        run: python -m unittest discover -s tests -v
+
+  report-ci:
+    name: Reportar resultado do CI na PR
+    if: always() && github.event_name == 'pull_request'
+    needs:
+      - python
+    uses: delta-app-ofc/.github/.github/workflows/report_ci.yml@8f4329cdde8ad39527069966a5cb97bbb49675b5
+    with:
+      needs_results: ${{ toJSON(needs) }}
+    secrets:
+      DELTA_ORG_AUTOMATION_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
+    permissions:
+      actions: read
+      issues: write
+      pull-requests: write
