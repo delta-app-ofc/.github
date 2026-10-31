@@ -14,23 +14,34 @@ CHECK = "Delta / Política Sonar"
 MARKER = "<!-- delta-sonar-report -->"
 
 
-def decide(issues, measures, approvals, baseline):
-    """Não confunde ausência de linhas novas com relatório ausente."""
+def grave_counts(issues):
+    """HIGH/BLOCKER por impacto; CRITICAL/BLOCKER no modelo legado."""
     counts = {"SECURITY": 0, "RELIABILITY": 0, "MAINTAINABILITY": 0}
     legacy = {"VULNERABILITY": "SECURITY", "BUG": "RELIABILITY", "CODE_SMELL": "MAINTAINABILITY"}
     for issue in issues:
         if issue.get("status") in {"CLOSED", "RESOLVED"} or issue.get("resolution"):
             continue
-        qualities = {impact["softwareQuality"] for impact in issue.get("impacts", [])}
-        if not qualities:
+        impacts = issue.get("impacts", [])
+        if impacts:
+            qualities = {impact["softwareQuality"] for impact in impacts
+                         if impact.get("severity", "").upper() in {"HIGH", "BLOCKER"}}
+        elif issue.get("severity", "").upper() in {"CRITICAL", "BLOCKER"}:
             kind = legacy.get(issue.get("type"))
             if not kind:
-                raise ValueError("Achado Sonar sem classificação reconhecida")
+                raise ValueError("Achado grave sem classificacao reconhecida")
             qualities = {kind}
+        else:
+            qualities = set()
         for quality in qualities:
             if quality not in counts:
                 raise ValueError("Qualidade Sonar desconhecida")
             counts[quality] += 1
+    return counts
+
+
+def decide(issues, measures, approvals, baseline):
+    """Somente achados graves novos bloqueiam ou exigem aprovacao extra."""
+    counts = grave_counts(issues)
     lines = float(measures["new_lines_to_cover"])
     coverage = None if lines == 0 else float(measures["new_coverage"])
     if lines < 0 or (coverage is not None and not 0 <= coverage <= 100):
@@ -143,6 +154,7 @@ def evaluate_pr(github, sonar, repo, number, project):
     if pr["state"] != "open":
         return
     sha = pr["head"]["sha"]
+    history = None
     state, description, result = "failure", "Validação Sonar pendente", None
     try:
         if not project or not sonar.token:
@@ -167,6 +179,19 @@ def evaluate_pr(github, sonar, repo, number, project):
         approvals = count_approvals(reviews, sha, pr["user"]["login"], permissions)
         issues, measures = sonar_snapshot(sonar, project, number, sha)
         result = decide(issues, measures, approvals, baseline)
+        try:
+            old_issues = []
+            for page in range(1, 101):
+                old = sonar.call("/api/issues/search?" + urlencode({"componentKeys": project,
+                                 "branch": pr["base"]["ref"], "resolved": "false", "ps": 100, "p": page}))
+                old_issues.extend(old["issues"])
+                if len(old_issues) >= old["paging"]["total"]:
+                    break
+            else:
+                raise ValueError("Historico excedeu limite seguro")
+            history = grave_counts(old_issues)
+        except Exception:
+            history = None  # Historico e apenas aviso, conforme regra aprovada.
         state = "success" if result["passed"] else "failure"
         description = "Política Sonar aprovada" if result["passed"] else "; ".join(result["reasons"])
     except Exception as error:
@@ -185,6 +210,12 @@ def evaluate_pr(github, sonar, repo, number, project):
         body += f'\n- Cobertura nova: {coverage}\n- Aprovações: {result["approvals"]}/{result["required"]}\n'
         body += f'- Segurança: {result["counts"]["SECURITY"]}\n- Confiabilidade: {result["counts"]["RELIABILITY"]}\n'
         body += f'- Manutenibilidade: {result["counts"]["MAINTAINABILITY"]} (somente aviso)\n'
+    if history is None:
+        body += "\nDivida grave da base: consulta indisponivel (somente aviso).\n"
+    else:
+        body += ("\nDivida grave existente na base (somente aviso): "
+                 + ", ".join(f"{quality}={count}" for quality, count in history.items()) + "\n")
+    body += "\nFiltro: Critical/Blocker (legado), High/Blocker (impactos). Achados menores nao bloqueiam.\n"
     body += f"\n[Ver análise]({url})\n\nO sucesso dos testes é exigido pelo check de testes separado (100%)."
     comments = github.pages(f"{prefix}/issues/{number}/comments")
     actor = github.call("/user")["login"]

@@ -5,18 +5,18 @@ from scripts.sonar_policy import decide, count_approvals, scanner_context_matche
 
 class PolicyTests(unittest.TestCase):
     def test_security_blocks_even_with_coverage_and_reviews(self):
-        result = decide([{"type": "VULNERABILITY"}], {"new_lines_to_cover": "10", "new_coverage": "100"}, 5, 1)
+        result = decide([{"type": "VULNERABILITY", "severity": "CRITICAL"}], {"new_lines_to_cover": "10", "new_coverage": "100"}, 5, 1)
         self.assertFalse(result["passed"])
         self.assertEqual(result["counts"]["SECURITY"], 1)
 
     def test_reliability_requires_one_more_than_baseline(self):
-        issues = [{"impacts": [{"softwareQuality": "RELIABILITY"}]}]
+        issues = [{"impacts": [{"softwareQuality": "RELIABILITY", "severity": "HIGH"}]}]
         measures = {"new_lines_to_cover": "1", "new_coverage": "70"}
         self.assertFalse(decide(issues, measures, 2, 2)["passed"])
         self.assertTrue(decide(issues, measures, 3, 2)["passed"])
 
     def test_maintenance_only_warns(self):
-        result = decide([{"type": "CODE_SMELL"}], {"new_lines_to_cover": "0"}, 0, 0)
+        result = decide([{"type": "CODE_SMELL", "severity": "CRITICAL"}], {"new_lines_to_cover": "0"}, 0, 0)
         self.assertTrue(result["passed"])
         self.assertEqual(result["counts"]["MAINTAINABILITY"], 1)
         self.assertIsNone(result["coverage"])
@@ -25,6 +25,15 @@ class PolicyTests(unittest.TestCase):
         for percentage, expected in [("69.99", False), ("70", True), ("100", True)]:
             with self.subTest(percentage=percentage):
                 self.assertEqual(decide([], {"new_lines_to_cover": "1", "new_coverage": percentage}, 0, 0)["passed"], expected)
+
+    def test_smaller_issues_do_not_block_or_require_extra_review(self):
+        issues = [{"type": "VULNERABILITY", "severity": "MAJOR"},
+                  {"type": "BUG", "severity": "MINOR"},
+                  {"impacts": [{"softwareQuality": "SECURITY", "severity": "MEDIUM"}]}]
+        result = decide(issues, {"new_lines_to_cover": "0"}, 1, 1)
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["required"], 1)
+        self.assertEqual(sum(result["counts"].values()), 0)
 
     def test_missing_report_is_not_zero_new_lines(self):
         with self.assertRaises(KeyError):
@@ -38,14 +47,14 @@ class PolicyTests(unittest.TestCase):
                 decide([], {"new_lines_to_cover": "1", "new_coverage": value}, 0, 0)
 
     def test_resolved_issues_do_not_block(self):
-        self.assertTrue(decide([{"type": "BUG", "resolution": "FIXED"}], {"new_lines_to_cover": "0"}, 0, 0)["passed"])
+        self.assertTrue(decide([{"type": "BUG", "severity": "CRITICAL", "resolution": "FIXED"}], {"new_lines_to_cover": "0"}, 0, 0)["passed"])
 
     def test_unknown_classification_blocks_instead_of_ignoring(self):
         with self.assertRaises(ValueError):
-            decide([{"type": "NEW_KIND"}], {"new_lines_to_cover": "0"}, 0, 0)
+            decide([{"type": "NEW_KIND", "severity": "CRITICAL"}], {"new_lines_to_cover": "0"}, 0, 0)
 
     def test_multi_impact_issue_counts_security_and_reliability(self):
-        issue = {"impacts": [{"softwareQuality": "SECURITY"}, {"softwareQuality": "RELIABILITY"}]}
+        issue = {"impacts": [{"softwareQuality": "SECURITY", "severity": "HIGH"}, {"softwareQuality": "RELIABILITY", "severity": "HIGH"}]}
         result = decide([issue], {"new_lines_to_cover": "0"}, 1, 1)
         self.assertEqual(result["required"], 2)
         self.assertFalse(result["passed"])

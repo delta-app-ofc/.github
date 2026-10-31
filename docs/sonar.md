@@ -2,6 +2,8 @@
 
 ## Regras
 
+Apenas achados novos graves afetam merge/aprovacoes: Critical/Blocker no modelo legado ou High/Blocker por impacto. Achados graves antigos da main aparecem somente como divida no comentario; nao bloqueiam a propria PR de correcao. Achados menores nao bloqueiam nem exigem aprovacao extra.
+
 - Todos os testes obrigatórios devem passar (100%). Zero testes não é aprovação.
 - Cobertura mínima de 70% somente no código novo/alterado instrumentável.
 - Problemas de segurança novos bloqueiam o check `Delta / Política Sonar`.

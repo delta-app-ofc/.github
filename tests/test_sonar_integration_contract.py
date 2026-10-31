@@ -55,7 +55,7 @@ class FakeSonar:
             return {"component": {"measures": [{"metric": "new_lines_to_cover", "period": {"value": "10"}},
                                                 {"metric": "new_coverage", "period": {"value": self.coverage}}]}}
         if path.startswith("/api/issues/search?"):
-            return {"issues": [{"type": "BUG"}, {"type": "CODE_SMELL"}], "paging": {"total": 2}}
+            return {"issues": [{"type": "BUG", "severity": "CRITICAL"}, {"type": "CODE_SMELL", "severity": "CRITICAL"}], "paging": {"total": 2}}
         raise AssertionError(path)
 
 
@@ -92,6 +92,20 @@ class IntegrationContractTests(unittest.TestCase):
             with self.subTest(github=github):
                 evaluate_pr(github, sonar, "owner/repo", 1, "project")
                 self.assertEqual(github.posts[0][2]["state"], "failure")
+
+    def test_old_grave_security_is_warning_and_does_not_block_fix_pr(self):
+        github, sonar = FakeGitHub(), FakeSonar()
+        original = sonar.call
+        def response(path):
+            if path.startswith("/api/issues/search?"):
+                issues = [{"type": "VULNERABILITY", "severity": "CRITICAL"}] if "branch=main" in path else []
+                return {"issues": issues, "paging": {"total": len(issues)}}
+            return original(path)
+        with patch.object(sonar, "call", side_effect=response):
+            evaluate_pr(github, sonar, "owner/repo", 1, "project")
+        self.assertEqual(github.posts[0][2]["state"], "success")
+        self.assertIn("SECURITY=1", github.posts[1][2]["body"])
+        self.assertIn("somente aviso", github.posts[1][2]["body"])
 
     def test_does_not_publish_for_obsolete_head(self):
         github = FakeGitHub(changed=True)
