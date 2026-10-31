@@ -51,6 +51,7 @@ jobs:
           name: ${{ inputs.artifact_name }}
           path: ${{ inputs.artifact_path }}
       - name: Analisar o SHA testado
+        if: github.event_name == 'pull_request'
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -63,6 +64,17 @@ jobs:
             -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
             -Dsonar.pullrequest.branch=${{ github.head_ref }}
             -Dsonar.pullrequest.base=${{ github.base_ref }}
+      - name: Atualizar referencia da main
+        if: github.event_name != 'pull_request'
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ inputs.host_url }}
+        with:
+          args: >-
+            -Dsonar.projectKey=${{ inputs.project_key }}
+            -Dsonar.organization=${{ inputs.organization }}
+            -Dsonar.scm.revision=${{ github.sha }}
       - name: Preservar referência da análise
         if: always()
         uses: actions/upload-artifact@v4
