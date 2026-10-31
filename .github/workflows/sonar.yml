@@ -46,15 +46,3 @@ jobs:
       organization: ${{ vars.SONAR_ORGANIZATION || 'delta-app-ofc' }}
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  report-ci:
-    if: always() && github.event_name == 'pull_request'
-    needs: tests
-    permissions:
-      actions: read
-      issues: write
-      pull-requests: write
-    uses: delta-app-ofc/.github/.github/workflows/report_ci.yml@7151f689c89bb564d50d1e15ceaf486ad89ff73b
-    with:
-      needs_results: ${{ toJSON(needs) }}
-    secrets:
-      DELTA_ORG_AUTOMATION_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
