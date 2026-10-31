@@ -48,6 +48,6 @@ Não invente percentual para SQL/Cypher ou repositórios só de documentação. 
 
 Security Hotspots são pontos que exigem triagem humana, não equivalem automaticamente a vulnerabilidades confirmadas. Sua triagem deve ser configurada no Quality Gate quando adotada; a política de achados classifica vulnerabilidades/impacts de segurança retornados pelo endpoint de issues.
 
-No delta-sql-database, o ativador exige os checks de integracao informados e nao acrescenta o status Sonar, pois SQL nao e instrumentado neste fluxo. Os outros repos participantes acrescentam testes e politica Sonar.
+O delta-sql-database tambem instrumenta bi_etl.py. Ao ativar seus checks, inclua os testes Python e o smoke PostgreSQL. Os arquivos SQL continuam validados por comportamento, sem percentual de linhas SQL.
 
 O workflow tambem analisa push na main, depois dos testes, para atualizar a referencia e a divida historica. A analise da main nao envia parametros de pull request. A primeira referencia pode ser disparada manualmente na main apos o merge dos workflows.
