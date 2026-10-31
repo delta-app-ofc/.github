@@ -6,6 +6,7 @@ on:
 jobs:
   pr-checks:
     name: Governança da Pull Request
+    if: contains(github.event.pull_request.body, format('<!-- delta-ci-result:{0}:', github.event.pull_request.head.sha))
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

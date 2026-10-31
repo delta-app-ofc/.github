@@ -98,16 +98,22 @@ jobs:
               });
             }
 
+            const markerPrefix = '<!-- delta-ci-result:';
+            const resultMarker = markerPrefix + prEvent.head.sha + ':' +
+              (passed ? 'success' : 'failure') + ' -->';
+            let updatedBody = pr.body
+              .replace(/<!-- delta-ci-result:[^>]*-->/g, '')
+              .replace(/\s+$/, '') + '\n\n' + resultMarker;
             const checkbox = /^- \[[ xX]\] O código foi devidamente testado e não causa novos bugs\.$/m;
-            if (checkbox.test(pr.body)) {
+            if (checkbox.test(updatedBody)) {
               const replacement = '- [' + (passed ? 'x' : ' ') +
                 '] O código foi devidamente testado e não causa novos bugs.';
-              const updatedBody = pr.body.replace(checkbox, replacement);
-              if (updatedBody !== pr.body) {
-                await github.rest.pulls.update({
-                  owner, repo, pull_number: number, body: updatedBody
-                });
-              }
+              updatedBody = updatedBody.replace(checkbox, replacement);
             } else {
               core.warning('O checkbox de testes esperado não foi encontrado na descrição da PR.');
+            }
+            if (updatedBody !== pr.body) {
+              await github.rest.pulls.update({
+                owner, repo, pull_number: number, body: updatedBody
+              });
             }
