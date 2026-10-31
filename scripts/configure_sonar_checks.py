@@ -22,7 +22,8 @@ def configure(api, repo, branch, extra_checks):
     for name in original.get("contexts", []):
         if not any(check["context"] == name for check in checks):
             checks.append({"context": name})
-    for name in [CHECK, *extra_checks]:
+    names = extra_checks if repo == "delta-app-ofc/delta-sql-database" else [CHECK, *extra_checks]
+    for name in names:
         if not any(check["context"] == name for check in checks):
             checks.append({"context": name})
     return api.call(path + "/required_status_checks", "PATCH", {

@@ -14,6 +14,12 @@ class ConfigureTests(unittest.TestCase):
         self.assertEqual(payload["checks"], [{"context": "Existing", "app_id": 42}, {"context": "Legacy"},
                                             {"context": "Delta / Política Sonar"}, {"context": "Tests"}])
 
+    def test_sql_requires_integration_without_nonexistent_sonar_check(self):
+        api = Mock()
+        api.call.side_effect = [{"required_status_checks": None}, {}]
+        configure(api, "delta-app-ofc/delta-sql-database", "main", ["smoke"])
+        self.assertEqual(api.call.call_args.args[2]["checks"], [{"context": "smoke"}])
+
     def test_failure_reading_protection_does_not_write(self):
         api = Mock()
         api.call.side_effect = RuntimeError("permission denied")

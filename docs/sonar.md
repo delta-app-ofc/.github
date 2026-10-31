@@ -47,3 +47,5 @@ Se a proteção/rulesets não puderem ser lidos ou o token Sonar não puder cons
 Não invente percentual para SQL/Cypher ou repositórios só de documentação. Testes de contratos, constraints e queries continuam obrigatórios quando aplicáveis; N/A precisa ser explícito. Scripts Mongo executados por mongosh não ganham cobertura de linhas apenas por um smoke passar. Os relatórios de Python/Java/JavaScript devem incluir o código real, e não somente os arquivos importados pelos testes.
 
 Security Hotspots são pontos que exigem triagem humana, não equivalem automaticamente a vulnerabilidades confirmadas. Sua triagem deve ser configurada no Quality Gate quando adotada; a política de achados classifica vulnerabilidades/impacts de segurança retornados pelo endpoint de issues.
+
+No delta-sql-database, o ativador exige os checks de integracao informados e nao acrescenta o status Sonar, pois SQL nao e instrumentado neste fluxo. Os outros repos participantes acrescentam testes e politica Sonar.
