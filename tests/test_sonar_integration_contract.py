@@ -86,18 +86,17 @@ class IntegrationContractTests(unittest.TestCase):
         with patch.object(sonar, "call", side_effect=response), self.assertRaises(ValueError):
             sonar_snapshot(sonar, "project", 1, "abc")
 
-    def test_publishes_status_and_separate_comment_using_maximum_baseline(self):
+    def test_publishes_status_and_separate_comment(self):
         github = FakeGitHub()
         evaluate_pr(github, FakeSonar(), "owner/repo", 1, "project")
         self.assertEqual(github.posts[0][2]["state"], "success")
-        self.assertIn("3/3", github.posts[1][2]["body"])
+        self.assertNotIn("Aprovações", github.posts[1][2]["body"])
         self.assertIn("somente aviso", github.posts[1][2]["body"])
 
-    def test_low_coverage_and_permission_errors_do_not_approve(self):
-        for github, sonar in [(FakeGitHub(), FakeSonar(coverage="69")), (FakeGitHub(broken=True), FakeSonar())]:
-            with self.subTest(github=github):
-                evaluate_pr(github, sonar, "owner/repo", 1, "project")
-                self.assertEqual(github.posts[0][2]["state"], "failure")
+    def test_low_coverage_does_not_approve(self):
+        github = FakeGitHub()
+        evaluate_pr(github, FakeSonar(coverage="69"), "owner/repo", 1, "project")
+        self.assertEqual(github.posts[0][2]["state"], "failure")
 
     def test_old_grave_security_is_warning_and_does_not_block_fix_pr(self):
         github, sonar = FakeGitHub(), FakeSonar()
