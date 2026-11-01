@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: delta-app-ofc/.github
-          ref: 2a3bfd88f76af53e9716f4907b9f8aba4aa89f55
+          ref: 4eff81733d3f1aea4d1cd35d821aa1929a630a6e
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
