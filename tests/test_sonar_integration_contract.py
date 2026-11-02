@@ -91,10 +91,15 @@ class IntegrationContractTests(unittest.TestCase):
     def test_empty_inventory_is_n_a_only_for_the_matching_current_pr(self):
         empty_tree = {"baseComponent": {"key": "project", "pullRequest": "1"},
                       "paging": {"total": 0}, "components": []}
+        sonar = FakeSonar(measures=[], tree=empty_tree)
         issues, measures, no_files_analyzed = sonar_snapshot(
-            FakeSonar(measures=[], tree=empty_tree), "project", 1, "abc")
+            sonar, "project", 1, "abc")
         self.assertEqual(measures, {})
         self.assertTrue(no_files_analyzed)
+        tree_path = next(path for path in sonar.calls if path.startswith("/api/components/tree?"))
+        tree_query = parse_qs(urlparse(tree_path).query)
+        self.assertEqual(tree_query, {"component": ["project"], "pullRequest": ["1"],
+                                      "qualifiers": ["FIL"], "ps": ["1"]})
 
     def test_empty_measures_with_a_file_remain_unavailable(self):
         sonar = FakeSonar(measures=[])
@@ -139,6 +144,7 @@ class IntegrationContractTests(unittest.TestCase):
         evaluate_pr(github, FakeSonar(measures=[], tree=empty_tree), "owner/repo", 1, "project")
         self.assertEqual(github.posts[0][2]["state"], "success")
         self.assertIn("N/A: nenhum arquivo analisado nesta PR", github.posts[1][2]["body"])
+        self.assertRegex(github.posts[1][2]["body"], r"Seguran.a: 0")
 
     def test_inventory_api_failure_does_not_authorize_n_a(self):
         github, sonar = FakeGitHub(), FakeSonar(measures=[])
