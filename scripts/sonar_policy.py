@@ -7,7 +7,7 @@ As APIs são injetáveis para permitir testes sem tokens ou chamadas externas.
 import json
 import os
 from decimal import Decimal, InvalidOperation
-from urllib.parse import urlencode, urlparse
+from urllib.parse import quote, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 
@@ -40,7 +40,7 @@ def grave_counts(issues):
     return counts
 
 
-def decide(issues, measures, no_files_analyzed=False):
+def decide(issues, measures, approvals=0, baseline=0, no_files_analyzed=False):
     """Somente achados graves novos de segurança e cobertura abaixo de 70% bloqueiam a PR."""
     counts = grave_counts(issues)
     new_lines = metric_number(measures, "new_lines", whole=True)
@@ -69,14 +69,31 @@ def decide(issues, measures, no_files_analyzed=False):
         coverage = coverage_value
         coverage_na_reason = None
 
+    required = baseline + (1 if counts["RELIABILITY"] else 0)
     reasons = []
     if counts["SECURITY"]:
         reasons.append("Há problemas de segurança no código novo.")
     if coverage is not None and coverage < 70:
         reasons.append("Cobertura do código novo inferior a 70%.")
+    if approvals < required:
+        reasons.append(f"Aprovações válidas: {approvals}/{required}.")
     return {"passed": not reasons, "counts": counts, "coverage": coverage,
             "coverage_na_reason": coverage_na_reason,
+            "approvals": approvals, "required": required,
             "reasons": reasons}
+
+
+def count_approvals(reviews, sha, author, permissions):
+    """Conta uma revisão vigente por pessoa, no SHA atual, com permissão de escrita."""
+    latest = {}
+    for review in sorted(reviews, key=lambda item: item["id"]):
+        if review["state"] == "COMMENTED":
+            continue
+        latest[review["user"]["login"]] = review
+    return sum(1 for login, review in latest.items()
+               if login != author and review["user"].get("type") == "User"
+               and review["state"] == "APPROVED" and review.get("commit_id") == sha
+               and permissions.get(login) in {"write", "maintain", "admin"})
 
 
 def metric_number(measures, name, whole=False):
@@ -220,8 +237,27 @@ def evaluate_pr(github, sonar, repo, number, project):
     try:
         if not project or not sonar.token:
             raise ValueError("Configure SONAR_PROJECT_KEY e SONAR_POLICY_TOKEN")
+        from urllib.error import HTTPError
+        base = quote(pr["base"]["ref"], safe="")
+        try:
+            protection = github.call(f"{prefix}/branches/{base}/protection")
+        except HTTPError as error:
+            if error.code != 404:
+                raise
+            protection = {}
+        baseline = (protection.get("required_pull_request_reviews") or {}).get("required_approving_review_count", 0)
+        rules = github.call(f"{prefix}/rules/branches/{base}")
+        for rule in rules:
+            if rule["type"] == "pull_request":
+                baseline = max(baseline, rule["parameters"]["required_approving_review_count"])
+        reviews = github.pages(f"{prefix}/pulls/{number}/reviews")
+        permissions = {}
+        for login in {r["user"]["login"] for r in reviews if r["state"] == "APPROVED"}:
+            permissions[login] = github.call(f"{prefix}/collaborators/{login}/permission")["permission"]
+        approvals = count_approvals(reviews, sha, pr["user"]["login"], permissions)
         issues, measures, no_files_analyzed = sonar_snapshot(sonar, project, number, sha)
-        result = decide(issues, measures, no_files_analyzed=no_files_analyzed)
+        result = decide(issues, measures, approvals=approvals, baseline=baseline,
+                        no_files_analyzed=no_files_analyzed)
         try:
             old_issues = []
             for page in range(1, 101):
@@ -251,7 +287,7 @@ def evaluate_pr(github, sonar, repo, number, project):
     if result:
         coverage = (f'N/A: {result["coverage_na_reason"]}' if result["coverage"] is None
                     else f'{result["coverage"]}% (mínimo 70%)')
-        body += f'\n- Cobertura nova: {coverage}\n'
+        body += f'\n- Cobertura nova: {coverage}\n- Aprovações: {result["approvals"]}/{result["required"]}\n'
         body += f'- Segurança: {result["counts"]["SECURITY"]}\n- Confiabilidade: {result["counts"]["RELIABILITY"]}\n'
         body += f'- Manutenibilidade: {result["counts"]["MAINTAINABILITY"]} (somente aviso)\n'
     if history is None:

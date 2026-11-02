@@ -3,13 +3,14 @@ import unittest
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 from urllib.error import HTTPError
-from scripts.sonar_policy import API, decide, evaluate_pr, sonar_snapshot, metric_value
+from scripts.sonar_policy import API, count_approvals, decide, evaluate_pr, sonar_snapshot, metric_value
 
 
 class FakeGitHub:
-    def __init__(self, changed=False, broken=False, existing=False):
+    def __init__(self, changed=False, broken=False, existing=False, approval_count=3):
         self.posts, self.reads = [], 0
         self.changed, self.broken, self.existing = changed, broken, existing
+        self.approval_count = approval_count
 
     def call(self, path, method="GET", data=None):
         if method != "GET":
@@ -33,7 +34,7 @@ class FakeGitHub:
 
     def pages(self, path):
         if path.endswith("/reviews"):
-            return [{"id": i, "state": "APPROVED", "commit_id": "abc", "user": {"login": f"reviewer{i}", "type": "User"}} for i in range(1, 4)]
+            return [{"id": i, "state": "APPROVED", "commit_id": "abc", "user": {"login": f"reviewer{i}", "type": "User"}} for i in range(1, self.approval_count + 1)]
         if path.endswith("/comments"):
             return [{"id": 4, "body": "<!-- delta-sonar-report -->", "user": {"login": "automation"}}] if self.existing else []
         raise AssertionError(path)
@@ -144,7 +145,31 @@ class IntegrationContractTests(unittest.TestCase):
         evaluate_pr(github, FakeSonar(measures=[], tree=empty_tree), "owner/repo", 1, "project")
         self.assertEqual(github.posts[0][2]["state"], "success")
         self.assertIn("N/A: nenhum arquivo analisado nesta PR", github.posts[1][2]["body"])
+        self.assertIn("Aprovações: 3/3", github.posts[1][2]["body"])
         self.assertRegex(github.posts[1][2]["body"], r"Seguran.a: 0")
+
+    def test_empty_inventory_still_requires_reliability_approval(self):
+        github = FakeGitHub(approval_count=2)
+        empty_tree = {"baseComponent": {"key": "project", "pullRequest": "1"},
+                      "paging": {"total": 0}, "components": []}
+        evaluate_pr(github, FakeSonar(measures=[], tree=empty_tree), "owner/repo", 1, "project")
+        self.assertEqual(github.posts[0][2]["state"], "failure")
+        self.assertIn("N/A: nenhum arquivo analisado nesta PR", github.posts[1][2]["body"])
+        self.assertIn("Aprovações: 2/3", github.posts[1][2]["body"])
+
+    def test_count_approvals_uses_latest_current_sha_user_with_write_access(self):
+        reviews = [
+            {"id": 1, "state": "APPROVED", "commit_id": "abc", "user": {"login": "writer", "type": "User"}},
+            {"id": 2, "state": "APPROVED", "commit_id": "old", "user": {"login": "stale", "type": "User"}},
+            {"id": 3, "state": "APPROVED", "commit_id": "abc", "user": {"login": "maintainer", "type": "User"}},
+            {"id": 4, "state": "APPROVED", "commit_id": "abc", "user": {"login": "revoked", "type": "User"}},
+            {"id": 5, "state": "CHANGES_REQUESTED", "commit_id": "abc", "user": {"login": "revoked", "type": "User"}},
+            {"id": 6, "state": "APPROVED", "commit_id": "abc", "user": {"login": "author", "type": "User"}},
+            {"id": 7, "state": "APPROVED", "commit_id": "abc", "user": {"login": "bot", "type": "Bot"}},
+        ]
+        permissions = {"writer": "write", "stale": "write", "maintainer": "maintain",
+                       "revoked": "write", "author": "admin", "bot": "admin"}
+        self.assertEqual(count_approvals(reviews, "abc", "author", permissions), 2)
 
     def test_inventory_api_failure_does_not_authorize_n_a(self):
         github, sonar = FakeGitHub(), FakeSonar(measures=[])
@@ -179,7 +204,7 @@ class IntegrationContractTests(unittest.TestCase):
         github = FakeGitHub()
         evaluate_pr(github, FakeSonar(), "owner/repo", 1, "project")
         self.assertEqual(github.posts[0][2]["state"], "success")
-        self.assertNotIn("Aprovações", github.posts[1][2]["body"])
+        self.assertIn("Aprovações: 3/3", github.posts[1][2]["body"])
         self.assertIn("somente aviso", github.posts[1][2]["body"])
 
     def test_low_coverage_does_not_approve(self):
