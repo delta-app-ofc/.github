@@ -2,7 +2,7 @@
 
 ## Regras
 
-Apenas achados novos graves afetam merge/aprovacoes: Critical/Blocker no modelo legado ou High/Blocker por impacto. Achados graves antigos da main aparecem somente como divida no comentario; nao bloqueiam a propria PR de correcao. Achados menores nao bloqueiam nem exigem aprovacao extra.
+Apenas achados novos graves são considerados pela política Sonar: Critical/Blocker no modelo legado ou High/Blocker por impacto. Achados graves antigos da main aparecem somente como divida no comentario; nao bloqueiam a propria PR de correcao. Achados menores nao bloqueiam nem exigem aprovacao extra.
 
 - Todos os testes obrigatórios devem passar (100%). Zero testes não é aprovação.
 - Cobertura mínima de 70% somente no código novo/alterado instrumentável.
@@ -10,9 +10,9 @@ Apenas achados novos graves afetam merge/aprovacoes: Critical/Blocker no modelo 
 - Valores de linhas devem ser números inteiros finitos e não negativos; cobertura deve ser finita e estar entre 0 e 100. Uma combinação contraditória, como `new_lines=0` com linhas a cobrir positivas, reprova a validação.
 - Problemas de segurança novos bloqueiam o check `Delta / Política Sonar`.
 - Problemas de segurança continuam sendo avaliados quando a cobertura é N/A.
-- Problemas de confiabilidade novos exigem uma aprovação humana além do maior número normal definido por proteção de branch/rulesets.
+- Problemas de confiabilidade aparecem no comentário como aviso e não exigem aprovações adicionais na política Sonar.
 - Problemas de manutenibilidade aparecem no comentário e não bloqueiam.
-- Aprovações precisam ser vigentes, do SHA atual, de pessoas com escrita, diferentes do autor. Comentários não revogam aprovações; dismiss/change request revogam.
+- Aprovações de PR, CODEOWNERS e revisões obrigatórias ficam exclusivamente com as proteções de branch/rulesets nativos do GitHub. A política Sonar não consulta nem conta revisões e não replica essas exigências.
 - O comentário `delta-sonar-report` é independente do comentário `delta-ci-report` existente. Não altera checkboxes da PR.
 - Falta de análise, dados ou configuração nunca é convertida em aprovação.
 
@@ -25,7 +25,7 @@ Apenas achados novos graves afetam merge/aprovacoes: Critical/Blocker no modelo 
 5. Cadastre as variáveis Actions `SONAR_ORGANIZATION` e `SONAR_PROJECT_KEY` em cada repo (a segunda é específica por projeto).
 6. Cadastre `SONAR_TOKEN` com permissão Execute Analysis. A análise usa somente token Sonar e GitHub somente leitura.
 7. Cadastre separadamente `SONAR_POLICY_TOKEN` para a avaliação confiável. A API de contexto do scanner pode exigir administração do projeto; esse token nunca é exposto ao código da PR.
-8. Preserve `DELTA_ORG_AUTOMATION_TOKEN` usado pela governança, com leitura das proteções/rulesets, revisões e permissões de colaboradores; escrita em status e comentários. Não cole tokens em arquivos, PRs ou chat.
+8. Preserve `DELTA_ORG_AUTOMATION_TOKEN` usado pela governança, com escrita em status e comentários para a avaliação Sonar. A configuração de checks obrigatórios mantém suas permissões próprias de leitura das proteções/rulesets. Não cole tokens em arquivos, PRs ou chat.
 9. Execute uma análise da branch principal para estabelecer a referência antes de analisar PRs. O fluxo de scan de PR usa explicitamente projeto, número e SHA; o primeiro baseline pode ser disparado pelo tutorial de CI do Sonar.
 10. No plano Free não há Quality Gate personalizado. Não torne obrigatório o Quality Gate padrão que bloqueia manutenibilidade/confiabilidade, pois conflita com as regras acima. Torne obrigatório o check próprio Delta, que consulta os achados e cobertura diretamente e verifica o SHA pelo contexto do scanner.
 
@@ -39,7 +39,7 @@ Os 16 repositórios publicam os mesmos checks: `ci-tecnico` para o gate de teste
 
 O workflow reutilizável de relatório tenta comentar a PR e atualizar seu corpo de forma independente. Erros nessas publicações geram avisos e resumo na execução; o resultado técnico continua baseado nos jobs necessários, e qualquer job necessário falho, cancelado ou pulado reprova o gate. Se a leitura da PR falhar, nenhum comentário ou marcador de SHA é publicado. Se a atualização do corpo falhar, o marcador de SHA não aparece e a validação local condicionada a esse marcador permanece pulada; os checks obrigatórios `ci-tecnico` e `Testes Sonar` continuam sendo a evidência de aprovação dos testes.
 
-A avaliação roda de código confiável da base por `pull_request_target`/`workflow_run`, sem executar a PR. O workflow sem privilegios de `pull_request_review` sinaliza revisoes novas/removidas; o `workflow_run` reavalia a politica na base confiavel, sem cron. Mudanças de SHA invalidam aprovações antigas. O check será atualizado após a nova análise; consultas concorrentes são rejeitadas para evitar relatório misturado.
+A avaliação roda de código confiável da base por `pull_request_target`/`workflow_run`, sem executar a PR. O workflow sem privilegios de `pull_request_review` sinaliza revisoes novas/removidas; o `workflow_run` reavalia a politica na base confiavel, sem cron. A validade das aprovações é controlada pelo GitHub; a política Sonar exige análise do SHA atual. O check será atualizado após a nova análise; consultas concorrentes são rejeitadas para evitar relatório misturado.
 
 Após merge da infraestrutura e teste real da configuração, adicione aos checks obrigatórios da main: o job de testes/cobertura do repo, o job de integração quando aplicável, e `Delta / Política Sonar`. O check de testes técnicos tem o nome `ci-tecnico`; o job de testes e cobertura do fluxo Sonar tem o nome `Testes Sonar`. Preserve os checks/regras atuais e a quantidade normal de revisões. Não aumente globalmente essa quantidade quando só uma PR tem achados. Workflows novos de `workflow_run` precisam existir na branch padrão para operar; esta PR não faz merge automático nem altera CD.
 
