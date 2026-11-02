@@ -37,28 +37,95 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const number = prEvent.number;
-            const { data: run } = await github.rest.actions.getWorkflowRun({
-              owner, repo, run_id: context.runId
-            });
-            const { data: pr } = await github.rest.pulls.get({
-              owner, repo, pull_number: number
-            });
+            const warnings = [];
+            const addWarning = message => {
+              warnings.push(message);
+              core.warning(message);
+            };
+            const writeSummary = async lines => {
+              try {
+                await core.summary.addRaw(lines.join('\n') + '\n').write();
+              } catch (error) {
+                core.warning('Não foi possível gravar o resumo do CI.');
+              }
+            };
+
+            let results;
+            try {
+              results = JSON.parse(process.env.NEEDS_RESULTS);
+              if (!results || typeof results !== 'object' || Array.isArray(results) ||
+                  Object.values(results).some(job => !job || typeof job !== 'object' || !('result' in job))) {
+                throw new Error('Resultados dos jobs em formato inválido');
+              }
+            } catch (error) {
+              addWarning('Não foi possível interpretar os resultados dos jobs; nenhum marcador foi publicado.');
+              await writeSummary([
+                '## Resultado do CI',
+                '',
+                '- Resultado dos testes: **indisponível**; não houve aprovação.',
+                '- Comentário e corpo/checklist: não atualizados.',
+                '',
+                '### Avisos',
+                ...warnings.map(item => '- ' + item)
+              ]);
+              return;
+            }
+            const passed = Object.keys(results).length > 0 &&
+              Object.values(results).every(job => job.result === 'success');
+
+            let run;
+            let pr;
+            try {
+              ({ data: run } = await github.rest.actions.getWorkflowRun({
+                owner, repo, run_id: context.runId
+              }));
+              ({ data: pr } = await github.rest.pulls.get({
+                owner, repo, pull_number: number
+              }));
+            } catch (error) {
+              addWarning('Não foi possível conferir a execução e a PR; o comentário e o corpo não foram alterados.');
+              await writeSummary([
+                '## Resultado do CI',
+                '',
+                '- Testes obrigatórios: **' + (passed ? 'aprovados' : 'reprovados') + '**, conforme os resultados dos jobs necessários.',
+                '- SHA atual da PR não confirmado; nenhum marcador foi publicado.',
+                '- Comentário e corpo/checklist: não atualizados.',
+                '',
+                '### Avisos',
+                ...warnings.map(item => '- ' + item)
+              ]);
+              return;
+            }
 
             if (pr.head.sha !== prEvent.head.sha) {
               core.info('Execução antiga; comentário e checklist não foram alterados.');
+              await writeSummary([
+                '## Resultado do CI',
+                '',
+                '- Testes obrigatórios: **' + (passed ? 'aprovados' : 'reprovados') + '**, para um SHA obsoleto.',
+                '- Comentário e corpo/checklist: não atualizados.'
+              ]);
               return;
             }
             const testedSha = prEvent.head.sha;
 
-            const results = JSON.parse(process.env.NEEDS_RESULTS);
-            const passed = Object.keys(results).length > 0 &&
-              Object.values(results).every(job => job.result === 'success');
-            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
-              owner, repo, run_id: context.runId, per_page: 100
-            });
+            let jobs = [];
+            let jobsAvailable = true;
+            try {
+              const response = await github.rest.actions.listJobsForWorkflowRun({
+                owner, repo, run_id: context.runId, per_page: 100
+              });
+              if (!response.data || !Array.isArray(response.data.jobs)) {
+                throw new Error('Lista de jobs em formato inválido');
+              }
+              jobs = response.data.jobs;
+            } catch (error) {
+              jobsAvailable = false;
+              addWarning('Não foi possível carregar os detalhes dos jobs; o resultado continua baseado nos jobs necessários.');
+            }
             const isReporterJob = job =>
               /report-ci|reportar resultado do ci/i.test(job.name);
-            const technicalJobs = jobs.jobs.filter(job => !isReporterJob(job));
+            const technicalJobs = jobs.filter(job => !isReporterJob(job));
             const jobLines = technicalJobs
               .filter(job => job.conclusion !== 'skipped')
               .map(job => '- ' + (job.conclusion === 'success' ? '✅' : '❌') +
@@ -79,45 +146,73 @@ jobs:
             const body = marker + '\n## CI ' + (passed ? 'aprovado ✅' : 'reprovado ❌') +
               '\n\nWorkflow: **' + context.workflow + '** · execução #' + run.run_number +
               '\nCommit testado: `' + testedSha.slice(0, 7) + '`' +
-              '\n\n' + (jobLines.length ? jobLines.join('\n') : 'Nenhum job de teste foi concluído.') +
+              '\n\n' + (jobsAvailable
+                ? (jobLines.length ? jobLines.join('\n') : 'Nenhum job de teste foi concluído.')
+                : 'Detalhes dos jobs não puderam ser consultados.') +
               '\n\n' + (passed
                 ? 'Os testes passaram para o commit atual da PR.'
                 : 'Falhas:\n' + (failureLines.length ? failureLines.join('\n') :
                   '- Um ou mais jobs necessários não terminaram com sucesso.')) +
               '\n\n[Ver logs desta execução](' + run.html_url + ')';
 
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner, repo, issue_number: number, per_page: 100
-            });
-            const previous = comments.find(comment =>
-              comment.body && comment.body.includes(marker)
-            );
-            if (previous) {
-              await github.rest.issues.updateComment({
-                owner, repo, comment_id: previous.id, body
+            let commentPublished = true;
+            try {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner, repo, issue_number: number, per_page: 100
               });
-            } else {
-              await github.rest.issues.createComment({
-                owner, repo, issue_number: number, body
-              });
+              const previous = comments.find(comment =>
+                comment.body && comment.body.includes(marker)
+              );
+              if (previous) {
+                await github.rest.issues.updateComment({
+                  owner, repo, comment_id: previous.id, body
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: number, body
+                });
+              }
+            } catch (error) {
+              commentPublished = false;
+              addWarning('Não foi possível publicar o comentário do CI.');
             }
 
-            const markerPrefix = '<!-- delta-ci-result:';
-            const resultMarker = markerPrefix + prEvent.head.sha + ':' +
-              (passed ? 'success' : 'failure') + ' -->';
-            let updatedBody = pr.body
-              .replace(/<!-- delta-ci-result:[^>]*-->/g, '')
-              .replace(/\s+$/, '') + '\n\n' + resultMarker;
-            const checkbox = /^- \[[ xX]\] (O código foi devidamente testado e não causa novos bugs\.)([^\r\n]*)$/m;
-            if (checkbox.test(updatedBody)) {
-              const replacement = '- [' + (passed ? 'x' : ' ') +
-                '] $1$2';
-              updatedBody = updatedBody.replace(checkbox, replacement);
-            } else {
-              core.warning('O checkbox de testes esperado não foi encontrado na descrição da PR.');
+            let bodyPublished = true;
+            try {
+              const markerPrefix = '<!-- delta-ci-result:';
+              const resultMarker = markerPrefix + prEvent.head.sha + ':' +
+                (passed ? 'success' : 'failure') + ' -->';
+              let updatedBody = pr.body
+                .replace(/<!-- delta-ci-result:[^>]*-->/g, '')
+                .replace(/\s+$/, '') + '\n\n' + resultMarker;
+              const checkbox = /^- \[[ xX]\] (O código foi devidamente testado e não causa novos bugs\.)([^\r\n]*)$/m;
+              if (checkbox.test(updatedBody)) {
+                const replacement = '- [' + (passed ? 'x' : ' ') +
+                  '] $1$2';
+                updatedBody = updatedBody.replace(checkbox, replacement);
+              } else {
+                core.warning('O checkbox de testes esperado não foi encontrado na descrição da PR.');
+              }
+              if (updatedBody !== pr.body) {
+                await github.rest.pulls.update({
+                  owner, repo, pull_number: number, body: updatedBody
+                });
+              }
+            } catch (error) {
+              bodyPublished = false;
+              addWarning('Não foi possível atualizar o resultado/checkbox no corpo da PR.');
             }
-            if (updatedBody !== pr.body) {
-              await github.rest.pulls.update({
-                owner, repo, pull_number: number, body: updatedBody
-              });
-            }
+
+            await writeSummary([
+              '## Resultado do CI',
+              '',
+              '- Testes obrigatórios: **' + (passed ? 'aprovados' : 'reprovados') + '**.',
+              '- Commit testado: `' + testedSha.slice(0, 7) + '`.',
+              '- Comentário do CI: ' + (commentPublished ? 'publicado/atualizado' : 'não publicado') + '.',
+              '- Corpo/checklist da PR: ' + (bodyPublished ? 'atualizado' : 'não atualizado') + '.',
+              warnings.length ? '\n### Avisos\n\n' + warnings.map(item => '- ' + item).join('\n') : '',
+              '',
+              passed
+                ? 'As falhas de publicação são informativas; o check de testes permanece a fonte de aprovação.'
+                : 'A publicação de relatórios não altera a reprovação dos testes obrigatórios.'
+            ].filter(Boolean));

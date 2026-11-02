@@ -23,6 +23,7 @@ mapping = {
 teams_to_add = (
     set()
 )  # set para não haver repetição de times caso haja mais de um checkbox marcado para o mesmo time
+results = []
 
 # Varre o corpo do PR procurando os termos (ignorando maiúsculas/minúsculas)
 for key, team in mapping.items():
@@ -35,7 +36,31 @@ for team in teams_to_add:
     print(f"Solicitando revisão do time: {full_team_name}")
 
     # Chama a ferramenta 'gh' do sistema
-    subprocess.run(
-        ["gh", "pr", "edit", pr_url, "--add-reviewer", full_team_name],
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["gh", "pr", "edit", pr_url, "--add-reviewer", full_team_name],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as error:
+        print(f"::warning::Não foi possível solicitar revisão para {full_team_name} ({type(error).__name__}).")
+        results.append(f"- {full_team_name}: solicitação não executada ({type(error).__name__}).")
+        continue
+
+    if result.returncode:
+        print(f"::warning::Não foi possível solicitar revisão para {full_team_name} (código {result.returncode}).")
+        results.append(f"- {full_team_name}: solicitação falhou (código {result.returncode}).")
+    else:
+        results.append(f"- {full_team_name}: revisão solicitada.")
+
+summary_path = os.getenv("GITHUB_STEP_SUMMARY")
+if summary_path:
+    summary = "## Roteamento de revisores\n\n" + (
+        "\n".join(results) if results else "Nenhum time de revisão selecionado."
+    ) + "\n"
+    try:
+        with open(summary_path, "a", encoding="utf-8") as summary_file:
+            summary_file.write(summary)
+    except OSError as error:
+        print(f"::warning::Não foi possível gravar o resumo de revisores ({type(error).__name__}).")
