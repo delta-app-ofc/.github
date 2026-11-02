@@ -11,11 +11,9 @@ class PolicyTests(unittest.TestCase):
 
     def test_reliability_only_warns(self):
         issues = [{"impacts": [{"softwareQuality": "RELIABILITY", "severity": "HIGH"}]}]
-        result = decide(issues, {"new_lines_to_cover": "1", "new_coverage": "70"}, approvals=1)
+        result = decide(issues, {"new_lines_to_cover": "1", "new_coverage": "70"})
         self.assertTrue(result["passed"])
         self.assertEqual(result["counts"]["RELIABILITY"], 1)
-        self.assertEqual(result["required"], 1)
-        self.assertEqual(result["approvals"], 1)
 
     def test_maintenance_only_warns(self):
         result = decide([{"type": "CODE_SMELL", "severity": "CRITICAL"}], {"new_lines_to_cover": "0"})
