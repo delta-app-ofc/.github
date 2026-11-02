@@ -12,7 +12,7 @@ on:
         type: string
         default: main
       test_checks:
-        description: 'JSON com nomes exatos dos checks de testes/integração (sem o gate padrão Sonar)'
+        description: 'JSON com nomes exatos dos checks ci-tecnico e Testes Sonar (sem o gate Delta / Política Sonar)'
         type: string
         required: true
 
