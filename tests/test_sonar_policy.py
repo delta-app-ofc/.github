@@ -21,6 +21,22 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(result["counts"]["MAINTAINABILITY"], 1)
         self.assertIsNone(result["coverage"])
 
+    def test_zero_coverable_lines_are_not_applicable(self):
+        result = decide([], {"new_lines": "8", "new_lines_to_cover": "0"})
+        self.assertTrue(result["passed"])
+        self.assertIsNone(result["coverage"])
+
+    def test_zero_new_lines_is_evidence_for_not_applicable(self):
+        result = decide([], {"new_lines": "0"})
+        self.assertTrue(result["passed"])
+        self.assertIsNone(result["coverage"])
+
+    def test_security_still_blocks_when_coverage_is_not_applicable(self):
+        result = decide([{"type": "VULNERABILITY", "severity": "CRITICAL"}], {"new_lines": "0"})
+        self.assertFalse(result["passed"])
+        self.assertIsNone(result["coverage"])
+        self.assertEqual(result["counts"]["SECURITY"], 1)
+
     def test_coverage_has_no_small_change_exception(self):
         for percentage, expected in [("69.99", False), ("70", True), ("100", True)]:
             with self.subTest(percentage=percentage):
@@ -34,16 +50,35 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(result["passed"])
         self.assertEqual(sum(result["counts"].values()), 0)
 
-    def test_missing_report_is_not_zero_new_lines(self):
-        with self.assertRaises(KeyError):
-            decide([], {})
-        with self.assertRaises(KeyError):
-            decide([], {"new_lines_to_cover": "1"})
+    def test_missing_metrics_are_unavailable_not_zero_or_not_applicable(self):
+        for measures in [
+            {},
+            {"new_lines": "4"},
+            {"new_lines": "4", "new_coverage": "80"},
+            {"new_lines_to_cover": "4"},
+        ]:
+            with self.subTest(measures=measures), self.assertRaises(ValueError):
+                decide([], measures)
 
     def test_invalid_coverage_rejected(self):
         for value in ["-1", "101", "nan"]:
             with self.subTest(value=value), self.assertRaises(ValueError):
                 decide([], {"new_lines_to_cover": "1", "new_coverage": value})
+
+    def test_invalid_metric_values_are_rejected_even_when_coverage_is_not_applicable(self):
+        for name, value in [
+            ("new_lines", "NaN"),
+            ("new_lines", "inf"),
+            ("new_lines", "-1"),
+            ("new_lines", "1.5"),
+            ("new_lines_to_cover", "Infinity"),
+            ("new_lines_to_cover", "-1"),
+            ("new_coverage", "inf"),
+        ]:
+            measures = {"new_lines_to_cover": "0"}
+            measures[name] = value
+            with self.subTest(name=name, value=value), self.assertRaises(ValueError):
+                decide([], measures)
 
     def test_resolved_issues_do_not_block(self):
         self.assertTrue(decide([{"type": "BUG", "severity": "CRITICAL", "resolution": "FIXED"}], {"new_lines_to_cover": "0"})["passed"])

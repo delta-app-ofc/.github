@@ -6,7 +6,10 @@ Apenas achados novos graves afetam merge/aprovacoes: Critical/Blocker no modelo 
 
 - Todos os testes obrigatórios devem passar (100%). Zero testes não é aprovação.
 - Cobertura mínima de 70% somente no código novo/alterado instrumentável.
+- Cobertura é N/A quando a API informa `new_lines_to_cover=0` ou, sem essa medida, `new_lines=0`. Se ambas as medidas estiverem ausentes, uma consulta independente à árvore de componentes só comprova N/A quando confirma zero arquivos para o mesmo projeto e a mesma PR. Resposta vazia de medidas, erro de API, identidade divergente ou árvore não vazia não comprovam N/A; `new_lines>0` sem `new_lines_to_cover` deixa a validação indisponível.
+- Valores de linhas devem ser números inteiros finitos e não negativos; cobertura deve ser finita e estar entre 0 e 100. Uma combinação contraditória, como `new_lines=0` com linhas a cobrir positivas, reprova a validação.
 - Problemas de segurança novos bloqueiam o check `Delta / Política Sonar`.
+- Problemas de segurança continuam sendo avaliados quando a cobertura é N/A.
 - Problemas de confiabilidade novos exigem uma aprovação humana além do maior número normal definido por proteção de branch/rulesets.
 - Problemas de manutenibilidade aparecem no comentário e não bloqueiam.
 - Aprovações precisam ser vigentes, do SHA atual, de pessoas com escrita, diferentes do autor. Comentários não revogam aprovações; dismiss/change request revogam.

@@ -6,6 +6,7 @@ As APIs são injetáveis para permitir testes sem tokens ou chamadas externas.
 
 import json
 import os
+from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
@@ -39,20 +40,63 @@ def grave_counts(issues):
     return counts
 
 
-def decide(issues, measures):
+def decide(issues, measures, no_files_analyzed=False):
     """Somente achados graves novos de segurança e cobertura abaixo de 70% bloqueiam a PR."""
     counts = grave_counts(issues)
-    lines = float(measures["new_lines_to_cover"])
-    coverage = None if lines == 0 else float(measures["new_coverage"])
-    if lines < 0 or (coverage is not None and not 0 <= coverage <= 100):
-        raise ValueError("Métrica de cobertura inválida")
+    new_lines = metric_number(measures, "new_lines", whole=True)
+    lines_to_cover = metric_number(measures, "new_lines_to_cover", whole=True)
+    coverage_value = metric_number(measures, "new_coverage")
+
+    if coverage_value is not None and coverage_value > 100:
+        raise ValueError("Métrica Sonar inválida: new_coverage deve estar entre 0 e 100")
+
+    if (no_files_analyzed and new_lines is None and lines_to_cover is None
+            and coverage_value is None):
+        coverage, coverage_na_reason = None, "nenhum arquivo analisado nesta PR"
+    elif lines_to_cover == 0:
+        coverage = None
+        coverage_na_reason = "nenhuma linha nova instrumentável"
+    elif new_lines == 0:
+        if lines_to_cover is not None:
+            raise ValueError("Métricas Sonar inconsistentes: new_lines é 0, mas há linhas a cobrir")
+        coverage = None
+        coverage_na_reason = "nenhuma linha nova no escopo analisado"
+    elif lines_to_cover is None:
+        raise ValueError("Métrica Sonar ausente: new_lines_to_cover para código novo")
+    elif coverage_value is None:
+        raise ValueError("Métrica Sonar ausente: new_coverage para linhas instrumentáveis")
+    else:
+        coverage = coverage_value
+        coverage_na_reason = None
+
     reasons = []
     if counts["SECURITY"]:
         reasons.append("Há problemas de segurança no código novo.")
     if coverage is not None and coverage < 70:
         reasons.append("Cobertura do código novo inferior a 70%.")
     return {"passed": not reasons, "counts": counts, "coverage": coverage,
+            "coverage_na_reason": coverage_na_reason,
             "reasons": reasons}
+
+
+def metric_number(measures, name, whole=False):
+    """Valida medida Sonar presente sem converter ausência ou valor inválido em zero."""
+    if name not in measures:
+        return None
+    value = measures[name]
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        raise ValueError(f"Métrica Sonar inválida: {name}")
+    try:
+        number = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValueError(f"Métrica Sonar inválida: {name}") from None
+    if not number.is_finite() or number < 0:
+        raise ValueError(f"Métrica Sonar inválida: {name}")
+    if whole:
+        if number != number.to_integral_value():
+            raise ValueError(f"Métrica Sonar inválida: {name}")
+        return int(number)
+    return float(number)
 
 
 class API:
@@ -98,6 +142,28 @@ def metric_value(item):
     return period.get("value", item.get("value"))
 
 
+def pr_analysis_has_no_files(sonar, project, number):
+    """Confirma uma árvore vazia da PR por rota independente das métricas."""
+    query = {"component": project, "pullRequest": number, "qualifiers": "FIL", "ps": 1}
+    result = sonar.call("/api/components/tree?" + urlencode(query))
+    base = result.get("baseComponent")
+    paging = result.get("paging")
+    components = result.get("components")
+    if (not isinstance(base, dict) or base.get("key") != project
+            or str(base.get("pullRequest")) != str(number)):
+        raise ValueError("Inventário Sonar não corresponde ao projeto e à PR atuais")
+    if not isinstance(paging, dict) or not isinstance(components, list):
+        raise ValueError("Resposta inválida do inventário de arquivos Sonar")
+    total = metric_number({"total": paging.get("total")}, "total", whole=True)
+    if total is None:
+        raise ValueError("Inventário Sonar sem total de arquivos")
+    if total == 0 and components == []:
+        return True
+    if total > 0 and len(components) == 1:
+        return False
+    raise ValueError("Inventário Sonar inconsistente")
+
+
 def sonar_snapshot(sonar, project, number, sha):
     """Exige tarefa concluída ligada ao projeto, PR e SHA, não análise antiga."""
     activity = sonar.call("/api/ce/activity?" + urlencode({"component": project, "ps": 100}))
@@ -120,9 +186,13 @@ def sonar_snapshot(sonar, project, number, sha):
     if not matched:
         raise ValueError("Nenhuma análise concluída e verificável para o SHA atual; confira acesso ao scannerContext")
     query = {"component": project, "pullRequest": number,
-             "metricKeys": "new_coverage,new_lines_to_cover"}
+             "metricKeys": "new_coverage,new_lines,new_lines_to_cover"}
     raw = sonar.call("/api/measures/component?" + urlencode(query))["component"]["measures"]
     measures = {item["metric"]: metric_value(item) for item in raw}
+    no_files_analyzed = False
+    if (not any(name in measures for name in
+                ("new_lines", "new_lines_to_cover", "new_coverage"))):
+        no_files_analyzed = pr_analysis_has_no_files(sonar, project, number)
     issues = []
     for page in range(1, 101):
         result = sonar.call("/api/issues/search?" + urlencode({"componentKeys": project,
@@ -136,7 +206,7 @@ def sonar_snapshot(sonar, project, number, sha):
     after = sonar.call("/api/ce/activity?" + urlencode({"component": project, "ps": 100}))
     if [t["id"] for t in after.get("tasks", [])] != [t["id"] for t in activity.get("tasks", [])]:
         raise ValueError("Análises mudaram durante a consulta; reexecute a avaliação")
-    return issues, measures
+    return issues, measures, no_files_analyzed
 
 
 def evaluate_pr(github, sonar, repo, number, project):
@@ -150,8 +220,8 @@ def evaluate_pr(github, sonar, repo, number, project):
     try:
         if not project or not sonar.token:
             raise ValueError("Configure SONAR_PROJECT_KEY e SONAR_POLICY_TOKEN")
-        issues, measures = sonar_snapshot(sonar, project, number, sha)
-        result = decide(issues, measures)
+        issues, measures, no_files_analyzed = sonar_snapshot(sonar, project, number, sha)
+        result = decide(issues, measures, no_files_analyzed=no_files_analyzed)
         try:
             old_issues = []
             for page in range(1, 101):
@@ -179,7 +249,8 @@ def evaluate_pr(github, sonar, repo, number, project):
         "state": state, "context": CHECK, "description": description[:140], "target_url": url})
     body = f"{MARKER}\n## Sonar {'aprovado ✅' if state == 'success' else 'pendente/reprovado ❌'}\n\nCommit: `{sha}`\n\n{description}\n"
     if result:
-        coverage = "N/A: nenhuma linha nova instrumentável" if result["coverage"] is None else f'{result["coverage"]}% (mínimo 70%)'
+        coverage = (f'N/A: {result["coverage_na_reason"]}' if result["coverage"] is None
+                    else f'{result["coverage"]}% (mínimo 70%)')
         body += f'\n- Cobertura nova: {coverage}\n'
         body += f'- Segurança: {result["counts"]["SECURITY"]}\n- Confiabilidade: {result["counts"]["RELIABILITY"]}\n'
         body += f'- Manutenibilidade: {result["counts"]["MAINTAINABILITY"]} (somente aviso)\n'
