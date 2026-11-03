@@ -1,8 +1,12 @@
-# Projeto Delta - Sistema Inteligente de Monitoramento e Gestão do Consumo de Água
+# Projeto Delta · Monitoramento de consumo de água
 
-Plataforma IoT completa para monitoramento inteligente do consumo de água residencial, com detecção de vazamentos, previsão de gastos e análise comportamental em tempo semi-real.
+![Projeto acadêmico](https://img.shields.io/badge/Projeto-acad%C3%AAmico-2E8B57)
+![IoT](https://img.shields.io/badge/IoT-hidr%C3%B4metros-0078D4?logo=arduino&logoColor=white)
+![Dados](https://img.shields.io/badge/Dados-PostgreSQL%20%7C%20MongoDB-4169E1?logo=postgresql&logoColor=white)
 
----
+O Projeto Delta é uma plataforma acadêmica de IoT voltada ao monitoramento residencial do consumo de água. Sensores conectados a hidrômetros coletam medições; os sistemas do projeto organizam esses dados e os apresentam em aplicações e relatórios.
+
+**Tags:** `iot` · `água` · `monitoramento` · `dados` · `postgresql` · `mongodb` · `business-intelligence`
 
 ## 📋 Essência do Projeto
 
@@ -24,31 +28,49 @@ O Projeto Delta surge como uma solução tecnológica inovadora para o monitoram
 - **Dashboard Gerencial**: Painel central com consumo diário/semanal/mensal, evolução histórica, alertas ativos e ranking
 - **Integração com API do Tempo**: Informações meteorológicas em tempo real para apoio à tomada de decisão diária
 
----
+## Frentes do projeto
 
-## 🏗️ Arquitetura da Solução
+| Frente | Escopo |
+|---|---|
+| Medição | Coletar o consumo de água com dispositivos conectados a hidrômetros. |
+| Histórico | Organizar as medições e as informações sobre o uso de água da residência. |
+| Prevenção | Identificar padrões de consumo e apoiar a investigação de possíveis vazamentos. |
+| Planejamento | Estimar gastos e apoiar decisões sobre consumo. |
+| Comparação | Explorar metas e rankings de eficiência entre instalações. |
+| Contexto | Relacionar o consumo às rotinas da residência e às condições meteorológicas. |
+| Acesso | Apresentar informações em dashboards, aplicações e experiências conversacionais. |
 
-### Camada IoT
-- **Sensor Hall**: Acoplado ao hidrômetro
-- **ESP32**: Processamento local e transmissão via Wi-Fi
-- **Dados Coletados**: Device ID, data/hora, quantidade de pulsos, vazão instantânea, consumo calculado
+## Arquitetura em poucas linhas
 
-### Fluxo de Dados
-Sensor Hall → ESP32 → API REST → MongoDB → Processamento → PostgreSQL → Redis → Web/Mobile
+- **IoT:** dispositivos como ESP32 e Arduino Uno R4 WiFi coletam pulsos do hidrômetro e transmitem medições.
+- **PostgreSQL:** organiza dados relacionais e transacionais, como cadastros e regras de negócio.
+- **MongoDB:** armazena dados documentais e telemetria de maior volume.
+- **Business Intelligence:** pipelines organizam dados em camadas analíticas para consultas, indicadores e relatórios.
 
-### Componentes de Armazenamento
-- **MongoDB**: Armazenamento de eventos de sensores
-- **PostgreSQL**: Dados estruturados de usuários e configurações
-- **Redis**: Cache e processamento em tempo real
-- **Neo4j**: Análise de relacionamentos entre dados
+Os bancos, pipelines e aplicações têm repositórios próprios; seus READMEs e documentos técnicos detalham cada componente.
 
----
+## Explore os repositórios
 
-## 📁 Estrutura do Repositório
-
-
-
----
+- [.github](https://github.com/delta-app-ofc/.github)
+- [delta-api-mongo](https://github.com/delta-app-ofc/delta-api-mongo)
+- [delta-api-postgres](https://github.com/delta-app-ofc/delta-api-postgres)
+- [delta-artificial-intelligence](https://github.com/delta-app-ofc/delta-artificial-intelligence)
+- [delta-business-intelligence](https://github.com/delta-app-ofc/delta-business-intelligence)
+- [delta-business-rules](https://github.com/delta-app-ofc/delta-business-rules)
+- [delta-database-primeiroano](https://github.com/delta-app-ofc/delta-database-primeiroano)
+- [delta-handbook](https://github.com/delta-app-ofc/delta-handbook)
+- [delta-hardware-data-simulator](https://github.com/delta-app-ofc/delta-hardware-data-simulator)
+- [delta-ia-observability](https://github.com/delta-app-ofc/delta-ia-observability)
+- [delta-landing-page](https://github.com/delta-app-ofc/delta-landing-page)
+- [delta-mobile-app](https://github.com/delta-app-ofc/delta-mobile-app)
+- [delta-mongo-database](https://github.com/delta-app-ofc/delta-mongo-database)
+- [delta-neo4j-database](https://github.com/delta-app-ofc/delta-neo4j-database)
+- [delta-redis-database](https://github.com/delta-app-ofc/delta-redis-database)
+- [delta-rpa](https://github.com/delta-app-ofc/delta-rpa)
+- [delta-servlet](https://github.com/delta-app-ofc/delta-servlet)
+- [delta-sql-database](https://github.com/delta-app-ofc/delta-sql-database)
+- [delta-template-repository](https://github.com/delta-app-ofc/delta-template-repository)
+- [delta-web-app](https://github.com/delta-app-ofc/delta-web-app)
 
 ## 👥 Integrantes
 
