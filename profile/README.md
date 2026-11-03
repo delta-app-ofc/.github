@@ -8,6 +8,26 @@ O Projeto Delta é uma plataforma acadêmica de IoT voltada ao monitoramento res
 
 **Tags:** `iot` · `água` · `monitoramento` · `dados` · `postgresql` · `mongodb` · `business-intelligence`
 
+## 📋 Essência do Projeto
+
+O Projeto Delta surge como uma solução tecnológica inovadora para o monitoramento inteligente do consumo de água em residências. Utilizando dispositivos IoT instalados em hidrômetros, a plataforma coleta dados de consumo, processa-os em tempo semi-real e disponibiliza informações relevantes através de uma plataforma web e mobile. Além do monitoramento, o sistema emprega análise de dados e inteligência artificial para identificar vazamentos, gerar alertas preditivos, prever gastos futuros e auxiliar na redução do desperdício de água, contribuindo para a preservação de recursos hídricos e redução de custos.
+
+---
+
+## 🎯 Funcionalidades Principais
+
+- **Monitoramento em Tempo Semi-Real**: Acompanhamento do consumo em intervalos configuráveis (5, 10 ou 15 minutos) com visualização de consumo acumulado, vazão média e evolução temporal
+- **Conversão Automática em Valor Monetário**: Conversão do consumo em estimativa financeira baseada nas tarifas cadastradas da concessionária
+- **Alertas Inteligentes**: Notificações quando o consumo ultrapassa limites definidos ou foge do padrão esperado, com alertas preditivos sobre ultrapassagem de metas
+- **Detecção Automática de Vazamentos**: Análise contínua do fluxo de água para identificar possíveis vazamentos
+- **Chatbot Inteligente**: Consultas em linguagem natural sobre dados da residência ("Quanto consumi hoje?", "Existe vazamento?", "Quanto vou pagar?")
+- **Metas de Consumo**: Definição de limites em litros, metros cúbicos ou valor monetário para controle proativo
+- **Ranking e Comparação**: Comparação entre instalações por consumo total, consumo per capita e economia mensal
+- **Cadastro de Rotina**: Personalização com características da residência para melhorar precisão dos algoritmos
+- **Previsão da Conta de Água**: Estimativa do valor da próxima fatura baseada em consumo atual e histórico
+- **Dashboard Gerencial**: Painel central com consumo diário/semanal/mensal, evolução histórica, alertas ativos e ranking
+- **Integração com API do Tempo**: Informações meteorológicas em tempo real para apoio à tomada de decisão diária
+
 ## Frentes do projeto
 
 | Frente | Escopo |
